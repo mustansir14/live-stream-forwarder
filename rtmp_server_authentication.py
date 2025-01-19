@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 
 app = FastAPI()
 
 SECRET_KEY = "4QOtJYZtBNXYZqGt"
+
 
 @app.post("/authenticate")
 async def authenticate(request: Request):

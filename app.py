@@ -1,17 +1,18 @@
 # create a fastapi app with two endpoints list running streams and list upcoming streams
 
-from fastapi import FastAPI
 from typing import List
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime, timedelta
+
+from internal.env import Env
+from internal.redis import RedisClient
 from internal.schemas import Stream, UpcomingStream
 
 app = FastAPI()
 
 # CORS allow all origins
-origins = [
-    "*"
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,22 +22,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE_SERVER_URL = "45.33.122.143/live"
+redis_client = RedisClient(host=Env.REDIS_HOST, port=Env.REDIS_PORT)
 
-streams = [
-    Stream(name="test", url=f"rtmp://{BASE_SERVER_URL}/test"),
-    Stream(name="test2", url=f"rtmp://{BASE_SERVER_URL}/test2"),
-]
-
-upcoming_streams = [
-    UpcomingStream(name="test3", url=f"rtmp://{BASE_SERVER_URL}/test3", start_time=datetime.now() + timedelta(hours=1)),
-    UpcomingStream(name="test4", url=f"rtmp://{BASE_SERVER_URL}/test4", start_time=datetime.now() + timedelta(hours=2)),
-]
 
 @app.get("/running-streams", response_model=List[Stream])
 async def get_running_streams():
-    return streams
+    return redis_client.get_running_streams()
+
 
 @app.get("/upcoming-streams", response_model=List[UpcomingStream])
 async def get_upcoming_streams():
-    return upcoming_streams
+    return redis_client.get_upcoming_streams()

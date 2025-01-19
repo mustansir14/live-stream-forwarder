@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    cap_add:
+      - SYS_ADMIN          # Grant additional permissions (for audio/video capture)
+
+  monitor:
+    build: .
+    entrypoint: ./monitor.sh
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    cap_add:
+      - SYS_ADMIN          # Grant additional permissions (for audio/video capture)
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6378:6379"
