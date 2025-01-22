@@ -162,6 +162,7 @@ class TRW(IStreamSource):
             stream_process.kill()
 
     def __get_stream_messages(
+        self, 
         driver: webdriver.Chrome,
     ) -> Generator[StreamChatMessage, None, None]:
 
