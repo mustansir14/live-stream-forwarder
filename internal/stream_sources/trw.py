@@ -60,14 +60,24 @@ class TRW(IStreamSource):
 
             display_port = f":{DISPLAY_PORT_START + i}"
             virtual_sink_name = f"virtual_sink_{i}"
+            print("Creating virtual sink")
+            create_virtual_sink(virtual_sink_name)
+            print("Starting xvfb")
+            start_xvfb(display_port)
+            os.environ["DISPLAY"] = display_port
+            os.environ["PULSE_SINK"] = virtual_sink_name
+            print("Initializing driver")
+            driver = initialize_trw(self.username, self.password, chromedriver_path)
+            driver.get(channel)
+            # print("Getting youtube")
+            # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
             process = multiprocessing.Process(
                 target=self.__monitor_stream,
                 args=(
-                    channel,
+                    driver,
                     destination_rtmp_server,
                     virtual_sink_name,
                     display_port,
-                    chromedriver_path,
                 ),
             )
             process.start()
@@ -78,23 +88,11 @@ class TRW(IStreamSource):
 
     def __monitor_stream(
         self,
-        channel: str,
+        driver: webdriver.Chrome,
         destination_rtmp_server: str,
         virtual_sink_name: str,
         display_port: str,
-        chromedriver_path: str,
     ) -> None:
-        print("Creating virtual sink")
-        create_virtual_sink(virtual_sink_name)
-        print("Starting xvfb")
-        start_xvfb(display_port)
-        os.environ["DISPLAY"] = display_port
-        os.environ["PULSE_SINK"] = virtual_sink_name
-        print("Initializing driver")
-        driver = initialize_trw(self.username, self.password, chromedriver_path)
-        driver.get(channel)
-        # print("Getting youtube")
-        # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
 
         while True:
 
@@ -155,6 +153,7 @@ class TRW(IStreamSource):
                 display_port,
             )
             self.redis_client.add_running_stream(stream)
+            # stream_process.wait()
 
             for stream_message in self.__get_stream_messages(driver):
                 self.redis_client.enqueue_stream_message(stream_id, stream_message)
