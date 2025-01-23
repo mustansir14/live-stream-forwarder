@@ -141,6 +141,8 @@ class TRW(IStreamSource):
             actionChains = ActionChains(driver)
             actionChains.double_click(video).perform()
 
+            driver.execute_script('document.getElementsByTagName("video")[0].play()')
+
             stream_id = str(uuid.uuid4())
             stream_url = destination_rtmp_server + "/" + stream_id
             stream = Stream(
