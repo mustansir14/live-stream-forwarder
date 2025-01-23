@@ -248,6 +248,7 @@ def parse_message_element(message_element: WebElement) -> StreamChatMessage:
         time=message_element.find_element(
             By.CLASS_NAME, "ml-3.cursor-default.text-3xs.opacity-50"
         ).text,
+        reply_to=None
     )
 
     try:
