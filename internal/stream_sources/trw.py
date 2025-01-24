@@ -61,18 +61,13 @@ class TRW(IStreamSource):
 
             display_port = f":{DISPLAY_PORT_START + i}"
             virtual_sink_name = f"virtual_sink_{i}"
-            print("Creating virtual sink")
-            create_virtual_sink(virtual_sink_name)
-            print("Starting xvfb")
-            start_xvfb(display_port)
-            os.environ["DISPLAY"] = display_port
-            os.environ["PULSE_SINK"] = virtual_sink_name
             print("Initializing driver")
-            driver = initialize_trw(self.username, self.password, chromedriver_path, i)
+            driver = initialize_trw(self.username, self.password, chromedriver_path, i, virtual_sink_name, display_port)
             print("fetching channel")
             driver.get(channel)
             # print("Getting youtube")
             # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
+
             process = multiprocessing.Process(
                 target=self.__monitor_stream,
                 args=(
@@ -199,7 +194,7 @@ class TRW(IStreamSource):
                 except:
                     pass
                 driver = initialize_trw(
-                    self.username, self.password, chromedriver_path, stream_number
+                    self.username, self.password, chromedriver_path, stream_number, virtual_sink_name, display_port
                 )
                 driver.get(channel)
 
@@ -244,7 +239,15 @@ def initialize_trw(
     password: str,
     chromedriver_path: str,
     number: str,
+    virtual_sink_name: str,
+    display_port: str,
 ) -> webdriver.Chrome:
+    print("Creating virtual sink")
+    create_virtual_sink(virtual_sink_name)
+    print("Starting xvfb")
+    start_xvfb(display_port)
+    os.environ["DISPLAY"] = display_port
+    os.environ["PULSE_SINK"] = virtual_sink_name
     chrome_opt = Options()
     chrome_opt.add_argument("--incognito")
     user_data_dir = f"/tmp/trw_user_data_{number}"
