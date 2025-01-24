@@ -22,11 +22,11 @@ from internal.stream_sources.base import IStreamSource
 from internal.utils import *
 
 CHANNELS_TO_MONITOR = [
-    "https://app.jointherealworld.com/chat/01GW4K82142Y9A465QDA3C7P44/01GKDTJZ2YCBW2FJKEN99F2NEQ",
     "https://app.jointherealworld.com/chat/01GVZRG9K25SS9JZBAMA4GRCEF/01JDEQ9MJA984M1NSPQZGM5BZC",
     "https://app.jointherealworld.com/chat/01GGDHGV32QWPG7FJ3N39K4FME/01GHHNFJ8H56EY45HTHESZTZGJ",
     "https://app.jointherealworld.com/chat/01GGDHGYWCHJD6DSZWGGERE3KZ/01GHHMNMCRY7YMRWD9MQPJ2H0Q",
     "https://app.jointherealworld.com/chat/01GGDHHZ377R1S4G4R6E29247S/01GHSBDYFPFBMQ1Y8B787ANNFA",
+    "https://app.jointherealworld.com/chat/01GW4K82142Y9A465QDA3C7P44/01GKDTJZ2YCBW2FJKEN99F2NEQ",
     "https://app.jointherealworld.com/chat/01GGDHHAR4MJXXKW3MMN85FY8C/01GHK58VJV5AV7T1DY83PGKSJW",
     "https://app.jointherealworld.com/chat/01GGDHHJJW5MQZBE0NPERYE8E7/01GHP2BTZKB71RJRQ48KN5KK7G",
     "https://app.jointherealworld.com/chat/01HZFA8C65G7QS2DQ5XZ2RNBFP/01GXNM8K22ZV1Q2122RC47R9AF",
