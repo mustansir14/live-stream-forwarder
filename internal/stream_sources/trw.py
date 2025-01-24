@@ -22,6 +22,7 @@ from internal.stream_sources.base import IStreamSource
 from internal.utils import *
 
 CHANNELS_TO_MONITOR = [
+    "https://app.jointherealworld.com/chat/01GW4K82142Y9A465QDA3C7P44/01GKDTJZ2YCBW2FJKEN99F2NEQ",
     "https://app.jointherealworld.com/chat/01GVZRG9K25SS9JZBAMA4GRCEF/01JDEQ9MJA984M1NSPQZGM5BZC",
     "https://app.jointherealworld.com/chat/01GGDHGV32QWPG7FJ3N39K4FME/01GHHNFJ8H56EY45HTHESZTZGJ",
     "https://app.jointherealworld.com/chat/01GGDHGYWCHJD6DSZWGGERE3KZ/01GHHMNMCRY7YMRWD9MQPJ2H0Q",
@@ -32,8 +33,7 @@ CHANNELS_TO_MONITOR = [
     "https://app.jointherealworld.com/chat/01GW4K766W7A5N6PWV2YCX0GZP/01GKDTKWTF7KWYQM9JPZNDE5E8",
     "https://app.jointherealworld.com/chat/01GXNJTRFK41EHBK63W4M5H74M/01GXNM8K22ZV1Q2122RC47R9AF",
     "https://app.jointherealworld.com/chat/01HSRZK1WHNV787DBPYQYN44ZS/01HST8F8W7P3VYBXCSDAVSS0GF",
-    "https://app.jointherealworld.com/chat/01GGDHJAQMA1D0VMK8WV22BJJN/01J4RER9MEEWZSV4R14AP1WXGT",
-    "https://app.jointherealworld.com/chat/01GW4K82142Y9A465QDA3C7P44/01GKDTJZ2YCBW2FJKEN99F2NEQ",
+    "https://app.jointherealworld.com/chat/01GGDHJAQMA1D0VMK8WV22BJJN/01J4RER9MEEWZSV4R14AP1WXGT",   
 ]
 
 DISPLAY_PORT_START = 100
@@ -52,76 +52,94 @@ class TRW(IStreamSource):
         self.password = password
         self.rtmp_server_key = rtmp_server_key
         self.redis_client = redis_client
+        self.channel_stream_ids = {}
 
     def monitor_streams(self, destination_rtmp_server: str):
 
-        processes = []
         chromedriver_path = ChromeDriverManager().install()
-        for i, channel in enumerate(CHANNELS_TO_MONITOR):
+        print_with_process_id("Initializing driver")
+        driver = initialize_trw(
+            self.username, self.password, chromedriver_path, -1, "", "", headless=True
+        )
+        i = -1
+        while True:
+            i = (i + 1) % len(CHANNELS_TO_MONITOR)
+            channel = CHANNELS_TO_MONITOR[i]
 
-            display_port = f":{DISPLAY_PORT_START + i}"
-            virtual_sink_name = f"virtual_sink_{i}"
-            print("Initializing driver")
-            driver = initialize_trw(self.username, self.password, chromedriver_path, i, virtual_sink_name, display_port)
-            print("fetching channel")
+            # if stream already running, skip
+            stream_id = self.channel_stream_ids.get(channel)
+            if stream_id and self.redis_client.get_running_stream(stream_id):
+                print_with_process_id("stream already running")
+                continue
+
+            print_with_process_id("fetching channel " + channel)
             driver.get(channel)
-            # print("Getting youtube")
+            # print_with_process_id("Getting youtube")
             # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
 
+            # check if stream is available
+            try:
+                print_with_process_id("waiting for stream")
+                wait_for_stream(driver)
+            except Exception as e:
+                print_with_process_id("stream not available")
+                continue
+
+            print_with_process_id("stream found")
+
+            stream_id = str(uuid.uuid4())
+            self.channel_stream_ids[channel] = stream_id
+
             process = multiprocessing.Process(
-                target=self.__monitor_stream,
+                target=self.__start_stream,
                 args=(
-                    driver,
+                    stream_id,
                     destination_rtmp_server,
-                    virtual_sink_name,
-                    display_port,
                     channel,
                     chromedriver_path,
                     i,
                 ),
             )
             process.start()
-            processes.append(process)
 
-        for process in processes:
-            process.join()
-
-    def __monitor_stream(
+    def __start_stream(
         self,
-        driver: webdriver.Chrome,
+        stream_id: str,
         destination_rtmp_server: str,
-        virtual_sink_name: str,
-        display_port: str,
         channel: str,
         chromedriver_path: str,
         stream_number: int,
     ) -> None:
-        while True:
 
-            print("starting monitoring process")
+        while True:
+            print_with_process_id("starting streaming")
+
+            display_port = f":{DISPLAY_PORT_START + stream_number}"
+            virtual_sink_name = f"virtual_sink_{stream_number}"
 
             stream_process = None
-            stream_id = None
 
             try:
 
+                driver = initialize_trw(
+                    self.username,
+                    self.password,
+                    chromedriver_path,
+                    stream_number,
+                    virtual_sink_name,
+                    display_port,
+                    headless=False,
+                )
+                print_with_process_id("fetching channel")
+                driver.get(channel)
+
                 # check if stream is available
                 try:
-                    stream = WebDriverWait(driver, 60).until(
-                        EC.presence_of_element_located(
-                            (
-                                By.CSS_SELECTOR,
-                                "#three-columns-layout > div:nth-child(1) > menu > section.flex.flex-1.flex-col.overflow-x-hidden.border-grey-secondary.border-r.bg-base-100.pt-inset-top.lg\:border-0 > div.group.relative.cursor-pointer.border.border-neutral.border-b.bg-base-200.p-3.mb-3.hover\:bg-success.hover\:bg-opacity-30",
-                            )
-                        )
-                    )
+                    print_with_process_id("finding stream")
+                    stream = wait_for_stream(driver)
                 except Exception as e:
-                    print(e)
-                    print("stream not available")
-                    driver.refresh()
-                    continue
-
-                print("stream found")
+                    print_with_process_id("stream not available")
+                    return
 
                 stream_name = stream.find_element(
                     By.CLASS_NAME, "flex.items-center.gap-1"
@@ -142,7 +160,7 @@ class TRW(IStreamSource):
                         )
                     )
                 except Exception:
-                    print("stream video not found")
+                    print_with_process_id("stream video not found")
                     return
 
                 # double click on video to make full screen
@@ -154,7 +172,6 @@ class TRW(IStreamSource):
                     'document.getElementsByTagName("video")[0].play()'
                 )
 
-                stream_id = str(uuid.uuid4())
                 stream_url = destination_rtmp_server + "/" + stream_id
                 stream = Stream(
                     id=stream_id,
@@ -162,7 +179,7 @@ class TRW(IStreamSource):
                     url=stream_url,
                     source=StreamSource.TRW,
                 )
-                print("Relaying stream to destination")
+                print_with_process_id("Relaying stream to destination")
                 stream_process = relay_stream_to_destination(
                     stream_url + "?key=" + self.rtmp_server_key,
                     virtual_sink_name,
@@ -177,26 +194,21 @@ class TRW(IStreamSource):
                 self.redis_client.delete_stream_by_id(stream_id)
                 stream_process.kill()
             except Exception as e:
-                print("Error in process", str(e))
-                print("Restarting process")
+                print_with_process_id("Error in process " + str(e))
+                print_with_process_id("Restarting process")
                 if stream_process:
                     try:
                         stream_process.kill()
                     except:
                         pass
-                if stream_id:
-                    try:
-                        self.redis_client.delete_stream_by_id(stream_id)
-                    except:
-                        pass
+                try:
+                    self.redis_client.delete_stream_by_id(stream_id)
+                except:
+                    pass
                 try:
                     driver.quit()
                 except:
                     pass
-                driver = initialize_trw(
-                    self.username, self.password, chromedriver_path, stream_number, virtual_sink_name, display_port
-                )
-                driver.get(channel)
 
     def __get_stream_messages(
         self,
@@ -211,7 +223,7 @@ class TRW(IStreamSource):
                 parsed_message = parse_message_element(message)
                 yield parsed_message
             except Exception as e:
-                print("error parsing message", e)
+                print_with_process_id("error parsing message " + e)
 
         while True:
             current_message_elements = driver.find_element(By.ID, "chat").find_elements(
@@ -229,7 +241,7 @@ class TRW(IStreamSource):
             try:
                 driver.find_element(By.TAG_NAME, "video")
             except Exception:
-                print("stream ended")
+                print_with_process_id("stream ended")
                 return
             time.sleep(0.5)
 
@@ -241,21 +253,24 @@ def initialize_trw(
     number: str,
     virtual_sink_name: str,
     display_port: str,
+    headless: bool,
 ) -> webdriver.Chrome:
-    print("Creating virtual sink")
-    create_virtual_sink(virtual_sink_name)
-    print("Starting xvfb")
-    start_xvfb(display_port)
-    os.environ["DISPLAY"] = display_port
-    os.environ["PULSE_SINK"] = virtual_sink_name
     chrome_opt = Options()
+    if not headless:
+        print_with_process_id("Creating virtual sink")
+        create_virtual_sink(virtual_sink_name)
+        print_with_process_id("Starting xvfb")
+        start_xvfb(display_port)
+        os.environ["DISPLAY"] = display_port
+        os.environ["PULSE_SINK"] = virtual_sink_name
+    else:
+        chrome_opt.add_argument("--headless")
     chrome_opt.add_argument("--incognito")
     user_data_dir = f"/tmp/trw_user_data_{number}"
     # delete dir if exists
     if os.path.exists(user_data_dir):
         shutil.rmtree(user_data_dir)
     chrome_opt.add_argument("--user-data-dir=" + user_data_dir)
-    chrome_opt.add_argument("--disable-gpu")
     chrome_opt.add_argument(
         "--autoplay-policy=no-user-gesture-required"
     )  # Ensure autoplay works for audio
@@ -263,6 +278,16 @@ def initialize_trw(
     chrome_opt.add_argument("--window-size=1280,720")
     chrome_opt.add_argument("--no-sandbox")
     chrome_opt.add_argument("--disable-dev-shm-usage")
+    chrome_opt.add_argument("--disable-renderer-backgrounding")
+    chrome_opt.add_argument("--disable-background-timer-throttling")
+    chrome_opt.add_argument("--disable-backgrounding-occluded-windows")
+    chrome_opt.add_argument("--disable-client-side-phishing-detection")
+    chrome_opt.add_argument("--disable-crash-reporter")
+    chrome_opt.add_argument("--disable-oopr-debug-crash-dump")
+    chrome_opt.add_argument("--no-crash-upload")
+    chrome_opt.add_argument("--disable-low-res-tiling")
+    chrome_opt.add_argument("--disable-gpu")
+
     chrome_opt.add_experimental_option("useAutomationExtension", False)
     chrome_opt.add_experimental_option("excludeSwitches", ["enable-automation"])
     driver = webdriver.Chrome(options=chrome_opt, service=Service(chromedriver_path))
@@ -273,7 +298,7 @@ def initialize_trw(
     driver.find_element(By.ID, "email").send_keys(username)
     driver.find_element(By.ID, "password").send_keys(password)
     driver.find_element(By.CLASS_NAME, "btn-primary.btn-no-effects").click()
-    print("logged in")
+    print_with_process_id("logged in")
     time.sleep(5)
 
     # close modal
@@ -281,10 +306,10 @@ def initialize_trw(
         WebDriverWait(driver, 30).until(
             EC.presence_of_element_located((By.CLASS_NAME, "modal-body"))
         ).find_elements(By.CLASS_NAME, "btn.btn-circle")[1].click()
-        print("popup closed")
+        print_with_process_id("popup closed")
     except Exception as e:
-        print(e)
-        print("popup not found")
+        print_with_process_id(e)
+        print_with_process_id("popup not found")
 
     return driver
 
@@ -319,3 +344,18 @@ def parse_message_element(message_element: WebElement) -> StreamChatMessage:
         pass
 
     return message
+
+
+def wait_for_stream(driver: webdriver.Chrome) -> WebElement:
+    return WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located(
+            (
+                By.CSS_SELECTOR,
+                "#three-columns-layout > div:nth-child(1) > menu > section.flex.flex-1.flex-col.overflow-x-hidden.border-grey-secondary.border-r.bg-base-100.pt-inset-top.lg\:border-0 > div.group.relative.cursor-pointer.border.border-neutral.border-b.bg-base-200.p-3.mb-3.hover\:bg-success.hover\:bg-opacity-30",
+            )
+        )
+    )
+
+
+def print_with_process_id(message: str):
+    print(f"[{os.getpid()}] {message}")

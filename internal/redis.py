@@ -14,6 +14,12 @@ class RedisClient:
     def __init__(self, host: str, port: int) -> None:
         self.redis = Redis(host=host, port=port)
 
+    def get_running_stream(self, stream_id: str) -> Stream | None:
+        for stream in self.get_running_streams():
+            if stream.id == stream_id:
+                return stream
+        return None
+
     def add_running_stream(self, stream: Stream) -> None:
         self.redis.sadd(RUNNING_STREAMS, stream.model_dump_json())
 
