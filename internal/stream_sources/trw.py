@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import shutil
 import time
 import uuid
 from typing import Generator, List
@@ -67,7 +68,8 @@ class TRW(IStreamSource):
             os.environ["DISPLAY"] = display_port
             os.environ["PULSE_SINK"] = virtual_sink_name
             print("Initializing driver")
-            driver = initialize_trw(self.username, self.password, chromedriver_path)
+            driver = initialize_trw(self.username, self.password, chromedriver_path, i)
+            print("fetching channel")
             driver.get(channel)
             # print("Getting youtube")
             # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
@@ -78,6 +80,9 @@ class TRW(IStreamSource):
                     destination_rtmp_server,
                     virtual_sink_name,
                     display_port,
+                    channel,
+                    chromedriver_path,
+                    i,
                 ),
             )
             process.start()
@@ -92,79 +97,114 @@ class TRW(IStreamSource):
         destination_rtmp_server: str,
         virtual_sink_name: str,
         display_port: str,
+        channel: str,
+        chromedriver_path: str,
+        stream_number: int,
     ) -> None:
-
         while True:
 
-            # check if stream is available
+            print("starting monitoring process")
+
+            stream_process = None
+            stream_id = None
+
             try:
-                stream = WebDriverWait(driver, 60).until(
-                    EC.presence_of_element_located(
-                        (
-                            By.CSS_SELECTOR,
-                            "#three-columns-layout > div:nth-child(1) > menu > section.flex.flex-1.flex-col.overflow-x-hidden.border-grey-secondary.border-r.bg-base-100.pt-inset-top.lg\:border-0 > div.group.relative.cursor-pointer.border.border-neutral.border-b.bg-base-200.p-3.mb-3.hover\:bg-success.hover\:bg-opacity-30",
+
+                # check if stream is available
+                try:
+                    stream = WebDriverWait(driver, 60).until(
+                        EC.presence_of_element_located(
+                            (
+                                By.CSS_SELECTOR,
+                                "#three-columns-layout > div:nth-child(1) > menu > section.flex.flex-1.flex-col.overflow-x-hidden.border-grey-secondary.border-r.bg-base-100.pt-inset-top.lg\:border-0 > div.group.relative.cursor-pointer.border.border-neutral.border-b.bg-base-200.p-3.mb-3.hover\:bg-success.hover\:bg-opacity-30",
+                            )
                         )
                     )
+                except Exception as e:
+                    print(e)
+                    print("stream not available")
+                    driver.refresh()
+                    continue
+
+                print("stream found")
+
+                stream_name = stream.find_element(
+                    By.CLASS_NAME, "flex.items-center.gap-1"
+                ).text
+                # stream_name = "Test stream"
+
+                stream.click()
+                time.sleep(10)
+
+                # get stream video div
+                try:
+                    video = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located(
+                            (
+                                By.CSS_SELECTOR,
+                                "#chat > article > div.absolute.top-0.right-0.left-0.z-20.flex.flex-col > div.relative.z-10.flex.w-full.items-center.justify-center.bg-black",
+                            )
+                        )
+                    )
+                except Exception:
+                    print("stream video not found")
+                    return
+
+                # double click on video to make full screen
+                time.sleep(10)
+                actionChains = ActionChains(driver)
+                actionChains.double_click(video).perform()
+
+                driver.execute_script(
+                    'document.getElementsByTagName("video")[0].play()'
                 )
+
+                stream_id = str(uuid.uuid4())
+                stream_url = destination_rtmp_server + "/" + stream_id
+                stream = Stream(
+                    id=stream_id,
+                    name=stream_name,
+                    url=stream_url,
+                    source=StreamSource.TRW,
+                )
+                print("Relaying stream to destination")
+                stream_process = relay_stream_to_destination(
+                    stream_url + "?key=" + self.rtmp_server_key,
+                    virtual_sink_name,
+                    display_port,
+                )
+                self.redis_client.add_running_stream(stream)
+                # stream_process.wait()
+
+                for stream_message in self.__get_stream_messages(driver):
+                    self.redis_client.enqueue_stream_message(stream_id, stream_message)
+
+                self.redis_client.delete_stream_by_id(stream_id)
+                stream_process.kill()
             except Exception as e:
-                print(e)
-                print("stream not available")
-                driver.refresh()
-                continue
-
-            print("stream found")
-
-            stream_name = stream.find_element(
-                By.CLASS_NAME, "flex.items-center.gap-1"
-            ).text
-            # stream_name = "Test stream"
-
-            stream.click()
-            time.sleep(10)
-
-            # get stream video div
-            try:
-                video = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located(
-                        (
-                            By.CSS_SELECTOR,
-                            "#chat > article > div.absolute.top-0.right-0.left-0.z-20.flex.flex-col > div.relative.z-10.flex.w-full.items-center.justify-center.bg-black",
-                        )
-                    )
+                print("Error in process", str(e))
+                print("Restarting process")
+                if stream_process:
+                    try:
+                        stream_process.kill()
+                    except:
+                        pass
+                if stream_id:
+                    try:
+                        self.redis_client.delete_stream_by_id(stream_id)
+                    except:
+                        pass
+                try:
+                    driver.quit()
+                except:
+                    pass
+                driver = initialize_trw(
+                    self.username, self.password, chromedriver_path, stream_number
                 )
-            except Exception:
-                print("stream video not found")
-                return
-
-            # double click on video to make full screen
-            print(time.sleep(5))
-            actionChains = ActionChains(driver)
-            actionChains.double_click(video).perform()
-
-            driver.execute_script('document.getElementsByTagName("video")[0].play()')
-
-            stream_id = str(uuid.uuid4())
-            stream_url = destination_rtmp_server + "/" + stream_id
-            stream = Stream(
-                id=stream_id, name=stream_name, url=stream_url, source=StreamSource.TRW
-            )
-            print("Relaying stream to destination")
-            stream_process = relay_stream_to_destination(
-                stream_url + "?key=" + self.rtmp_server_key,
-                virtual_sink_name,
-                display_port,
-            )
-            self.redis_client.add_running_stream(stream)
-            # stream_process.wait()
-
-            for stream_message in self.__get_stream_messages(driver):
-                self.redis_client.enqueue_stream_message(stream_id, stream_message)
-
-            self.redis_client.delete_stream_by_id(stream_id)
-            stream_process.kill()
+                driver.get(channel)
 
     def __get_stream_messages(
-        self, 
+        self,
         driver: webdriver.Chrome,
     ) -> Generator[StreamChatMessage, None, None]:
 
@@ -200,9 +240,18 @@ class TRW(IStreamSource):
 
 
 def initialize_trw(
-    username: str, password: str, chromedriver_path: str
+    username: str,
+    password: str,
+    chromedriver_path: str,
+    number: str,
 ) -> webdriver.Chrome:
     chrome_opt = Options()
+    chrome_opt.add_argument("--incognito")
+    user_data_dir = f"/tmp/trw_user_data_{number}"
+    # delete dir if exists
+    if os.path.exists(user_data_dir):
+        shutil.rmtree(user_data_dir)
+    chrome_opt.add_argument("--user-data-dir=" + user_data_dir)
     chrome_opt.add_argument("--disable-gpu")
     chrome_opt.add_argument(
         "--autoplay-policy=no-user-gesture-required"
@@ -250,7 +299,7 @@ def parse_message_element(message_element: WebElement) -> StreamChatMessage:
         time=message_element.find_element(
             By.CLASS_NAME, "ml-3.cursor-default.text-3xs.opacity-50"
         ).text,
-        reply_to=None
+        reply_to=None,
     )
 
     try:

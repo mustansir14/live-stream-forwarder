@@ -5,14 +5,17 @@ from pydantic import BaseModel
 from internal.enums import StreamSource
 
 
-class Stream(BaseModel):
-    id: str
+class StreamBase(BaseModel):
     name: str
-    url: str
     source: StreamSource
 
 
-class UpcomingStream(Stream):
+class Stream(StreamBase):
+    id: str
+    url: str
+
+
+class UpcomingStream(StreamBase):
     start_time: datetime
 
 

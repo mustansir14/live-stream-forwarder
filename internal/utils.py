@@ -1,6 +1,7 @@
 import subprocess
 import time
 
+
 def start_xvfb(display_port):
     # Start the Xvfb server
     subprocess.Popen(["Xvfb", display_port, "-screen", "0", "1280x720x24"])

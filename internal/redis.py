@@ -37,8 +37,6 @@ class RedisClient:
     def delete_all_streams(self) -> None:
         for stream in self.get_running_streams():
             self.redis.delete(STREAM_CHAT_MESSAGES % stream.id)
-        for stream in self.get_upcoming_streams():
-            self.redis.delete(STREAM_CHAT_MESSAGES % stream.id)
         self.redis.delete(RUNNING_STREAMS)
         self.redis.delete(UPCOMING_STREAMS)
 
@@ -50,7 +48,7 @@ class RedisClient:
                 return
 
         for stream in self.get_upcoming_streams():
-            if stream.id == stream_id:
+            if stream.name == stream_id:
                 self.redis.srem(UPCOMING_STREAMS, stream.model_dump_json())
                 return
         raise ValueError(f"Stream with id {stream_id} not found")
