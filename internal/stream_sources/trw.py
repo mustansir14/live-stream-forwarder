@@ -235,8 +235,11 @@ class TRW(IStreamSource):
                 )
                 new_message_elements = current_message_elements[-new_messages_count:]
                 for message in new_message_elements:
-                    parsed_message = parse_message_element(message)
-                    yield parsed_message
+                    try:
+                        parsed_message = parse_message_element(message)
+                        yield parsed_message
+                    except Exception as e:
+                        print_with_process_id("error parsing message " + str(e))
                 existing_messages_elements += new_message_elements
             try:
                 driver.find_element(By.TAG_NAME, "video")
