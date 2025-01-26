@@ -223,7 +223,7 @@ class TRW(IStreamSource):
                 parsed_message = parse_message_element(message)
                 yield parsed_message
             except Exception as e:
-                print_with_process_id("error parsing message " + e)
+                print_with_process_id("error parsing message " + str(e))
 
         while True:
             current_message_elements = driver.find_element(By.ID, "chat").find_elements(
