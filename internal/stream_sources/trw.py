@@ -63,44 +63,54 @@ class TRW(IStreamSource):
         )
         i = -1
         while True:
-            i = (i + 1) % len(CHANNELS_TO_MONITOR)
-            channel = CHANNELS_TO_MONITOR[i]
-
-            # if stream already running, skip
-            stream_id = self.channel_stream_ids.get(channel)
-            if stream_id and self.redis_client.get_running_stream(stream_id):
-                print_with_process_id("stream already running")
-                continue
-
-            print_with_process_id("fetching channel " + channel)
-            driver.get(channel)
-            # print_with_process_id("Getting youtube")
-            # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
-
-            # check if stream is available
             try:
-                print_with_process_id("waiting for stream")
-                wait_for_stream(driver)
+                i = (i + 1) % len(CHANNELS_TO_MONITOR)
+                channel = CHANNELS_TO_MONITOR[i]
+
+                # if stream already running, skip
+                stream_id = self.channel_stream_ids.get(channel)
+                if stream_id and self.redis_client.get_running_stream(stream_id):
+                    print_with_process_id("stream already running")
+                    continue
+
+                print_with_process_id("fetching channel " + channel)
+                driver.get(channel)
+                # print_with_process_id("Getting youtube")
+                # driver.get("https://www.youtube.com/watch?v=k9KhdIxeAVM&ab_channel=shfashowIndia")
+
+                # check if stream is available
+                try:
+                    print_with_process_id("waiting for stream")
+                    wait_for_stream(driver)
+                except Exception as e:
+                    print_with_process_id("stream not available")
+                    continue
+
+                print_with_process_id("stream found")
+
+                stream_id = str(uuid.uuid4())
+                self.channel_stream_ids[channel] = stream_id
+
+                process = multiprocessing.Process(
+                    target=self.__start_stream,
+                    args=(
+                        stream_id,
+                        destination_rtmp_server,
+                        channel,
+                        chromedriver_path,
+                        i,
+                    ),
+                )
+                process.start()
             except Exception as e:
-                print_with_process_id("stream not available")
-                continue
-
-            print_with_process_id("stream found")
-
-            stream_id = str(uuid.uuid4())
-            self.channel_stream_ids[channel] = stream_id
-
-            process = multiprocessing.Process(
-                target=self.__start_stream,
-                args=(
-                    stream_id,
-                    destination_rtmp_server,
-                    channel,
-                    chromedriver_path,
-                    i,
-                ),
-            )
-            process.start()
+                print_with_process_id("Main process exception, restarting..." + str(e))
+                try:
+                    driver.quit()
+                except:
+                    pass
+                driver = initialize_trw(
+                    self.username, self.password, chromedriver_path, -1, "", "", headless=True
+                )
 
     def __start_stream(
         self,
