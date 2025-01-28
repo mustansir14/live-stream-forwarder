@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 import uuid
-from typing import Generator, List
+from typing import Dict, Generator, List
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -16,6 +16,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 from internal.enums import StreamSource
+from internal.message_parser import MessageParser
 from internal.redis import RedisClient
 from internal.schemas import BaseChatMessage, Stream, StreamChatMessage
 from internal.stream_sources.base import IStreamSource
@@ -33,7 +34,7 @@ CHANNELS_TO_MONITOR = [
     "https://app.jointherealworld.com/chat/01GW4K766W7A5N6PWV2YCX0GZP/01GKDTKWTF7KWYQM9JPZNDE5E8",
     "https://app.jointherealworld.com/chat/01GXNJTRFK41EHBK63W4M5H74M/01GXNM8K22ZV1Q2122RC47R9AF",
     "https://app.jointherealworld.com/chat/01HSRZK1WHNV787DBPYQYN44ZS/01HST8F8W7P3VYBXCSDAVSS0GF",
-    "https://app.jointherealworld.com/chat/01GGDHJAQMA1D0VMK8WV22BJJN/01J4RER9MEEWZSV4R14AP1WXGT",   
+    "https://app.jointherealworld.com/chat/01GGDHJAQMA1D0VMK8WV22BJJN/01J4RER9MEEWZSV4R14AP1WXGT",
 ]
 
 DISPLAY_PORT_START = 100
@@ -47,12 +48,15 @@ class TRW(IStreamSource):
         password: str,
         rtmp_server_key: str,
         redis_client: RedisClient,
+        openai_api_key: str,
     ) -> None:
         self.username = username
         self.password = password
         self.rtmp_server_key = rtmp_server_key
         self.redis_client = redis_client
-        self.channel_stream_ids = {}
+        self.channel_stream_ids: Dict[str, str] = {}
+        self.channel_last_messages: Dict[str, StreamChatMessage] = {}
+        self.message_parser = MessageParser(openai_api_key)
 
     def monitor_streams(self, destination_rtmp_server: str):
 
@@ -109,7 +113,13 @@ class TRW(IStreamSource):
                 except:
                     pass
                 driver = initialize_trw(
-                    self.username, self.password, chromedriver_path, -1, "", "", headless=True
+                    self.username,
+                    self.password,
+                    chromedriver_path,
+                    -1,
+                    "",
+                    "",
+                    headless=True,
                 )
 
     def __start_stream(
@@ -150,6 +160,9 @@ class TRW(IStreamSource):
                 except Exception as e:
                     print_with_process_id("stream not available")
                     return
+                finally:
+                    # check for upcoming stream messages
+                    self.__check_upcoming_stream_messages(self, driver)
 
                 stream_name = stream.find_element(
                     By.CLASS_NAME, "flex.items-center.gap-1"
@@ -225,9 +238,7 @@ class TRW(IStreamSource):
         driver: webdriver.Chrome,
     ) -> Generator[StreamChatMessage, None, None]:
 
-        existing_messages_elements = driver.find_element(By.ID, "chat").find_elements(
-            By.CLASS_NAME, "chat-message"
-        )
+        existing_messages_elements = get_chat_messages(driver)
         for message in existing_messages_elements:
             try:
                 parsed_message = parse_message_element(message)
@@ -236,9 +247,7 @@ class TRW(IStreamSource):
                 print_with_process_id("error parsing message " + str(e))
 
         while True:
-            current_message_elements = driver.find_element(By.ID, "chat").find_elements(
-                By.CLASS_NAME, "chat-message"
-            )
+            current_message_elements = get_chat_messages(driver)
             if len(current_message_elements) != len(existing_messages_elements):
                 new_messages_count = len(current_message_elements) - len(
                     existing_messages_elements
@@ -257,6 +266,33 @@ class TRW(IStreamSource):
                 print_with_process_id("stream ended")
                 return
             time.sleep(0.5)
+
+    def __check_upcoming_stream_messages(
+        self, driver: webdriver.Chrome, channel: str
+    ) -> None:
+        chat_messages = get_chat_messages(driver)
+        chat_messages.reverse()
+
+        if not chat_messages:
+            return
+
+        channel_last_message = self.channel_last_messages.get(channel)
+        self.channel_last_messages[channel]
+
+        for i, chat_message in enumerate(chat_messages[:5]):
+            try:
+                message = parse_message_element(chat_message)
+                if i == 0:
+                    self.channel_last_messages[channel] = message
+
+                if channel_last_message and message.id == channel_last_message.id:
+                    break
+
+                upcoming_streams = self.message_parser.parse(message)
+                for upcoming_stream in upcoming_streams:
+                    self.redis_client.add_upcoming_stream(upcoming_stream)
+            except Exception as e:
+                print_with_process_id("error parsing message " + str(e))
 
 
 def initialize_trw(
@@ -360,7 +396,7 @@ def parse_message_element(message_element: WebElement) -> StreamChatMessage:
 
 
 def wait_for_stream(driver: webdriver.Chrome) -> WebElement:
-    return WebDriverWait(driver, 30).until(
+    return WebDriverWait(driver, 20).until(
         EC.presence_of_element_located(
             (
                 By.CSS_SELECTOR,
@@ -372,3 +408,9 @@ def wait_for_stream(driver: webdriver.Chrome) -> WebElement:
 
 def print_with_process_id(message: str):
     print(f"[{os.getpid()}] {message}")
+
+
+def get_chat_messages(driver: webdriver.Chrome) -> List[WebElement]:
+    return driver.find_element(By.ID, "chat").find_elements(
+        By.CLASS_NAME, "chat-message"
+    )

@@ -1,13 +1,15 @@
 # create a fastapi app with two endpoints list running streams and list upcoming streams
 
+import asyncio
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from internal.env import Env
 from internal.redis import RedisClient
 from internal.schemas import Stream, UpcomingStream
+from internal.websocket import ConnectionManager
 
 app = FastAPI()
 
@@ -33,3 +35,24 @@ async def get_running_streams():
 @app.get("/upcoming-streams", response_model=List[UpcomingStream])
 async def get_upcoming_streams():
     return redis_client.get_upcoming_streams()
+
+
+manager = ConnectionManager()
+
+
+@app.websocket("/ws/stream-messages/{stream_id}")
+async def get_stream_messages(websocket: WebSocket, stream_id: str):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Dequeue message from Redis
+            message = redis_client.dequeue_stream_message(stream_id)
+            if message:
+                # Broadcast the message to all connected clients
+                await manager.broadcast(message)
+            await asyncio.sleep(
+                1
+            )  # Adjust the delay as needed to control message frequency
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print(f"Client disconnected from stream {stream_id}")
