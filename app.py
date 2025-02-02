@@ -34,7 +34,17 @@ async def get_running_streams():
 
 @app.get("/upcoming-streams", response_model=List[UpcomingStream])
 async def get_upcoming_streams():
-    return redis_client.get_upcoming_streams()
+    upcoming_streams = redis_client.get_upcoming_streams()
+
+    upcoming_streams_to_return = []
+    # remove old streams
+    for upcoming_stream in upcoming_streams:
+        if upcoming_stream.is_expired():
+            redis_client.delete_upcoming_stream(upcoming_stream)
+            continue
+        upcoming_streams_to_return.append(upcoming_stream)
+    
+    return upcoming_streams_to_return
 
 
 manager = ConnectionManager()
@@ -50,9 +60,6 @@ async def get_stream_messages(websocket: WebSocket, stream_id: str):
             if message:
                 # Broadcast the message to all connected clients
                 await manager.broadcast(message)
-            await asyncio.sleep(
-                1
-            )  # Adjust the delay as needed to control message frequency
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         print(f"Client disconnected from stream {stream_id}")

@@ -261,7 +261,10 @@ class TRW(IStreamSource):
                         print_with_process_id("error parsing message " + str(e))
                 existing_messages_elements += new_message_elements
             try:
-                driver.find_element(By.TAG_NAME, "video")
+                video = driver.find_element(By.TAG_NAME, "video")
+                if not video.is_displayed():
+                    print_with_process_id("stream ended")
+                    return
             except Exception:
                 print_with_process_id("stream ended")
                 return

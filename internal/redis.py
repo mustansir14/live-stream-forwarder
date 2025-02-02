@@ -58,6 +58,9 @@ class RedisClient:
                 self.redis.srem(UPCOMING_STREAMS, stream.model_dump_json())
                 return
         raise ValueError(f"Stream with id {stream_id} not found")
+    
+    def delete_upcoming_stream(self, stream: UpcomingStream) -> None:
+        self.redis.srem(UPCOMING_STREAMS, stream.model_dump_json())
 
     def enqueue_stream_message(
         self, stream_id: str, message: StreamChatMessage
