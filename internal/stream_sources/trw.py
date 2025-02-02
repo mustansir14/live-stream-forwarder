@@ -89,6 +89,9 @@ class TRW(IStreamSource):
                 except Exception as e:
                     print_with_process_id("stream not available")
                     continue
+                finally:
+                    # check for upcoming stream messages
+                    self.__check_upcoming_stream_messages(driver, channel)
 
                 print_with_process_id("stream found")
 
@@ -160,9 +163,6 @@ class TRW(IStreamSource):
                 except Exception as e:
                     print_with_process_id("stream not available")
                     return
-                finally:
-                    # check for upcoming stream messages
-                    self.__check_upcoming_stream_messages(self, driver)
 
                 stream_name = stream.find_element(
                     By.CLASS_NAME, "flex.items-center.gap-1"
@@ -277,7 +277,6 @@ class TRW(IStreamSource):
             return
 
         channel_last_message = self.channel_last_messages.get(channel)
-        self.channel_last_messages[channel]
 
         for i, chat_message in enumerate(chat_messages[:5]):
             try:
@@ -288,7 +287,7 @@ class TRW(IStreamSource):
                 if channel_last_message and message.id == channel_last_message.id:
                     break
 
-                upcoming_streams = self.message_parser.parse(message)
+                upcoming_streams = self.message_parser.parse(message, StreamSource.TRW)
                 for upcoming_stream in upcoming_streams:
                     self.redis_client.add_upcoming_stream(upcoming_stream)
             except Exception as e:
