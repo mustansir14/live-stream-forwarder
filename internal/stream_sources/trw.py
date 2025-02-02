@@ -289,6 +289,7 @@ class TRW(IStreamSource):
 
                 upcoming_streams = self.message_parser.parse(message, StreamSource.TRW)
                 for upcoming_stream in upcoming_streams:
+                    print_with_process_id("found upcoming stream " + str(upcoming_stream))
                     self.redis_client.add_upcoming_stream(upcoming_stream)
             except Exception as e:
                 print_with_process_id("error parsing message " + str(e))
