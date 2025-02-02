@@ -10,6 +10,8 @@ services:
       - REDIS_PORT=6379
     cap_add:
       - SYS_ADMIN          # Grant additional permissions (for audio/video capture)
+    volumes:
+      - .:/app
 
   monitor:
     build: .
@@ -21,6 +23,8 @@ services:
       - REDIS_PORT=6379
     cap_add:
       - SYS_ADMIN          # Grant additional permissions (for audio/video capture)
+    volumes:
+      - .:/app
 
   redis:
     image: "redis:alpine"
