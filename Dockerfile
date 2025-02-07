@@ -1,6 +1,9 @@
 # Use the official Python 3.11.5 image as a base
 FROM python:3.11.5-slim
 
+# Define Google Chrome version as a build argument
+ARG CHROME_VERSION=131.0.6778.204  # Change this to the required version
+
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -14,9 +17,9 @@ RUN apt-get update && \
     x11-utils \
     x11-xserver-utils && \
     wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list && \
+    echo "deb http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list && \
     apt-get update -y && \
-    apt-get install -y google-chrome-stable && \
+    apt-get install -y google-chrome-stable=$CHROME_VERSION-1 && \
     rm -rf /var/lib/apt/lists/*
 
 # add root user to group for pulseaudio access
@@ -33,7 +36,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application files and shared code into the container
 COPY . /app/
-
 
 # Expose the port FastAPI will run on
 EXPOSE 8000
