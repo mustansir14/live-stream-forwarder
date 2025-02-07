@@ -177,8 +177,8 @@ class TRW(IStreamSource):
                     video = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located(
                             (
-                                By.CSS_SELECTOR,
-                                "#chat > article > div.absolute.top-0.right-0.left-0.z-20.flex.flex-col > div.relative.z-10.flex.w-full.items-center.justify-center.bg-black",
+                                By.TAG_NAME,
+                                "video",
                             )
                         )
                     )
