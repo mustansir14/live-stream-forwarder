@@ -32,6 +32,11 @@ RUN apt-get update && \
     libxtst6 \
     libnss3 \
     lsb-release \
+    libcurl3-gnutls \
+    libcurl3-nss \
+    libcurl4 \
+    libcurl3 \
+    xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}-1_amd64.deb \
