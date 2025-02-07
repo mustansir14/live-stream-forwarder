@@ -1,8 +1,8 @@
 # Use the official Python 3.11.5 image as a base
 FROM python:3.11.5-slim
 
-# Define Google Chrome version as a build argument
-ARG CHROME_VERSION=131.0.6778.204  # Change this to the required version
+# Define Google Chrome version as a build argument (change this if needed)
+ARG CHROME_VERSION=131.0.6778.204  # Set the specific Chrome version
 
 # Install system dependencies
 RUN apt-get update && \
@@ -15,14 +15,30 @@ RUN apt-get update && \
     pulseaudio-utils \
     dbus \
     x11-utils \
-    x11-xserver-utils && \
-    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list && \
-    apt-get update -y && \
-    apt-get install -y google-chrome-stable=$CHROME_VERSION-1 && \
-    rm -rf /var/lib/apt/lists/*
+    x11-xserver-utils \
+    libasound2 \
+    fonts-liberation \
+    libgbm1 \
+    libgtk-3-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxss1 \
+    libxtst6 \
+    libnss3 \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
 
-# add root user to group for pulseaudio access
+# Manually download and install Google Chrome
+RUN wget -q https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}-1_amd64.deb && \
+    dpkg -i google-chrome-stable_${CHROME_VERSION}-1_amd64.deb || apt-get install -f -y && \
+    rm -f google-chrome-stable_${CHROME_VERSION}-1_amd64.deb
+
+# Add root user to group for pulseaudio access
 RUN adduser root pulse-access
 
 # Set the working directory
@@ -34,7 +50,7 @@ COPY requirements.txt /app/
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application files and shared code into the container
+# Copy the application files into the container
 COPY . /app/
 
 # Expose the port FastAPI will run on
