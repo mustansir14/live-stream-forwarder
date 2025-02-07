@@ -402,8 +402,8 @@ def wait_for_stream(driver: webdriver.Chrome) -> WebElement:
     return WebDriverWait(driver, 20).until(
         EC.presence_of_element_located(
             (
-                By.CSS_SELECTOR,
-                "#three-columns-layout > div:nth-child(1) > menu > section.flex.flex-1.flex-col.overflow-x-hidden.border-grey-secondary.border-r.bg-base-100.pt-inset-top.lg\:border-0 > div.group.relative.cursor-pointer.border.border-neutral.border-b.bg-base-200.p-3.mb-3.hover\:bg-success.hover\:bg-opacity-30",
+                By.CLASS_NAME,
+                "group relative cursor-pointer border border-neutral border-b bg-base-200 p-3 mb-3 hover:bg-success/30"
             )
         )
     )
