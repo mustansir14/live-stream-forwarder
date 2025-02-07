@@ -2,6 +2,7 @@
 FROM python:3.11.5-slim
 
 # Define Google Chrome version as a build argument (change this if needed)
+# Check available versions here: https://www.ubuntuupdates.org/package/google_chrome/stable/main/base/google-chrome-stable
 ARG CHROME_VERSION=131.0.6778.204  # Set the specific Chrome version
 
 # Install system dependencies
@@ -33,10 +34,9 @@ RUN apt-get update && \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
-# Manually download and install Google Chrome
-RUN wget -q https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}-1_amd64.deb && \
-    dpkg -i google-chrome-stable_${CHROME_VERSION}-1_amd64.deb || apt-get install -f -y && \
-    rm -f google-chrome-stable_${CHROME_VERSION}-1_amd64.deb
+RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}-1_amd64.deb \
+  && apt install -y /tmp/chrome.deb \
+  && rm /tmp/chrome.deb
 
 # Add root user to group for pulseaudio access
 RUN adduser root pulse-access
