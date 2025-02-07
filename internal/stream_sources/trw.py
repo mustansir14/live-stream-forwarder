@@ -403,7 +403,7 @@ def wait_for_stream(driver: webdriver.Chrome) -> WebElement:
         EC.presence_of_element_located(
             (
                 By.CLASS_NAME,
-                "group relative cursor-pointer border border-neutral border-b bg-base-200 p-3 mb-3 hover:bg-success/30"
+                "group.relative.cursor-pointer.border.border-neutral.border-b.bg-base-200.p-3.mb-3.hover:bg-success/30"
             )
         )
     )
