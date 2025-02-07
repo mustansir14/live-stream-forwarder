@@ -35,7 +35,6 @@ RUN apt-get update && \
     libcurl3-gnutls \
     libcurl3-nss \
     libcurl4 \
-    libcurl3 \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
