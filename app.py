@@ -61,14 +61,7 @@ async def get_stream_messages(websocket: WebSocket, stream_id: str):
                 # Broadcast the message to all connected clients
                 await manager.broadcast(message)
             await asyncio.sleep(0.1)
-
-             # Check if the client is still connected
-            try:
-                await websocket.receive_text()
-            except WebSocketDisconnect:
-                break
     except WebSocketDisconnect:
-        pass
+        print(f"Client disconnected from stream {stream_id}")
     finally:
         manager.disconnect(websocket)
-        print(f"Client disconnected from stream {stream_id}")
