@@ -384,7 +384,7 @@ def parse_message_element(message_element: WebElement) -> StreamChatMessage:
         ).text,
         author=message_element.find_element(
             By.CLASS_NAME, "inline-flex.items-center.cursor-pointer.font-medium.text-xs"
-        ).text,
+        ).text.strip(),
         time=message_element.find_element(
             By.CLASS_NAME, "ml-3.cursor-default.text-3xs.opacity-50"
         ).text,
