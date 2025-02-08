@@ -214,7 +214,7 @@ class TRW(IStreamSource):
                 self.redis_client.add_running_stream(stream)
                 # stream_process.wait()
 
-                for stream_message in self.__get_stream_messages(driver):
+                for stream_message in self.__get_stream_messages(driver, video):
                     self.redis_client.enqueue_stream_message(stream_id, stream_message)
 
                 self.redis_client.delete_stream_by_id(stream_id)
@@ -240,6 +240,7 @@ class TRW(IStreamSource):
     def __get_stream_messages(
         self,
         driver: webdriver.Chrome,
+        video: WebElement,
     ) -> Generator[StreamChatMessage, None, None]:
 
         existing_messages_elements = get_chat_messages(driver)
@@ -265,7 +266,6 @@ class TRW(IStreamSource):
                         print_with_process_id("error parsing message " + str(e))
                 existing_messages_elements += new_message_elements
             try:
-                video = driver.find_element(By.TAG_NAME, "video")
                 if not video.is_displayed():
                     print_with_process_id("stream ended")
                     return
