@@ -219,6 +219,7 @@ class TRW(IStreamSource):
 
                 self.redis_client.delete_stream_by_id(stream_id)
                 stream_process.kill()
+                return
             except Exception as e:
                 print_with_process_id("Error in process " + str(e))
                 print_with_process_id("Restarting process")
