@@ -57,7 +57,6 @@ class RedisClient:
             if stream.name == stream_id:
                 self.redis.srem(UPCOMING_STREAMS, stream.model_dump_json())
                 return
-        raise ValueError(f"Stream with id {stream_id} not found")
     
     def delete_upcoming_stream(self, stream: UpcomingStream) -> None:
         self.redis.srem(UPCOMING_STREAMS, stream.model_dump_json())
