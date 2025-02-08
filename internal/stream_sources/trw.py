@@ -271,6 +271,12 @@ class TRW(IStreamSource):
             except Exception:
                 print_with_process_id("stream ended")
                 return
+            try:
+                driver.execute_script(
+                    'document.getElementsByTagName("video")[0].play()'
+                )
+            except:
+                pass
             time.sleep(0.5)
 
     def __check_upcoming_stream_messages(
