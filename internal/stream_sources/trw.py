@@ -61,13 +61,10 @@ class TRW(IStreamSource):
     def monitor_streams(self, destination_rtmp_server: str):
 
         chromedriver_path = ChromeDriverManager().install()
-        print(f"Installed ChromeDriver at: {chromedriver_path}")
         print_with_process_id("Initializing driver")
         driver = initialize_trw(
             self.username, self.password, chromedriver_path, -1, "", "", headless=True
         )
-        print(f"ChromeDriver Version: {driver.capabilities['chrome']['chromedriverVersion']}")
-        print(f"Browser Version: {driver.capabilities['browserVersion']}")
         i = -1
         while True:
             try:

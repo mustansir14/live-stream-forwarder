@@ -16,6 +16,7 @@ services:
   monitor:
     build: .
     entrypoint: ./monitor.sh
+    restart: always
     depends_on:
       - redis
     environment:
