@@ -366,7 +366,7 @@ def initialize_trw(
 
     # close modal
     try:
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.CLASS_NAME, "modal-body"))
         ).find_elements(By.CLASS_NAME, "btn.btn-circle")[1].click()
         print_with_process_id("popup closed")
