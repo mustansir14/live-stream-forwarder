@@ -371,6 +371,7 @@ def initialize_trw(
         ).find_elements(By.CLASS_NAME, "btn.btn-circle")[1].click()
         print_with_process_id("popup closed")
     except Exception as e:
+        driver.save_screenshot("test.png")
         print_with_process_id(e)
         print_with_process_id("popup not found")
 
