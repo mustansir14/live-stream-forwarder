@@ -426,6 +426,6 @@ def print_with_process_id(message: str):
 
 
 def get_chat_messages(driver: webdriver.Chrome) -> List[WebElement]:
-    return driver.find_element(By.ID, "chat").find_elements(
+    return driver.find_element(By.ID, "chat-scroller").find_elements(
         By.CLASS_NAME, "chat-message"
     )
