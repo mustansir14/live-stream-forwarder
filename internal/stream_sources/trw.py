@@ -90,6 +90,7 @@ class TRW(IStreamSource):
                     print_with_process_id("stream not available")
                     continue
                 finally:
+                    driver.save_screenshot("test.png")
                     # check for upcoming stream messages
                     self.__check_upcoming_stream_messages(driver, channel)
 
