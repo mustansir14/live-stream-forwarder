@@ -62,8 +62,10 @@ class TRW(IStreamSource):
 
         chromedriver_path = ChromeDriverManager().install()
         print_with_process_id("Initializing driver")
+        display_port = f":{DISPLAY_PORT_START - 1}"
+        virtual_sink_name = f"virtual_sink_trw_main"
         driver = initialize_trw(
-            self.username, self.password, chromedriver_path, -1, "", "", headless=True
+            self.username, self.password, chromedriver_path, -1, virtual_sink_name, display_port,
         )
         i = -1
         while True:
@@ -121,9 +123,8 @@ class TRW(IStreamSource):
                     self.password,
                     chromedriver_path,
                     -1,
-                    "",
-                    "",
-                    headless=True,
+                    virtual_sink_name,
+                    display_port,
                 )
 
     def __start_stream(
@@ -152,7 +153,6 @@ class TRW(IStreamSource):
                     stream_number,
                     virtual_sink_name,
                     display_port,
-                    headless=False,
                 )
                 print_with_process_id("fetching channel")
                 driver.get(channel)
@@ -317,18 +317,14 @@ def initialize_trw(
     number: str,
     virtual_sink_name: str,
     display_port: str,
-    headless: bool,
 ) -> webdriver.Chrome:
     chrome_opt = Options()
-    if not headless:
-        print_with_process_id("Creating virtual sink")
-        create_virtual_sink(virtual_sink_name)
-        print_with_process_id("Starting xvfb")
-        start_xvfb(display_port)
-        os.environ["DISPLAY"] = display_port
-        os.environ["PULSE_SINK"] = virtual_sink_name
-    else:
-        chrome_opt.add_argument("--headless")
+    print_with_process_id("Creating virtual sink")
+    create_virtual_sink(virtual_sink_name)
+    print_with_process_id("Starting xvfb")
+    start_xvfb(display_port)
+    os.environ["DISPLAY"] = display_port
+    os.environ["PULSE_SINK"] = virtual_sink_name
     chrome_opt.add_argument("--incognito")
     user_data_dir = f"/tmp/trw_user_data_{number}"
     # delete dir if exists
