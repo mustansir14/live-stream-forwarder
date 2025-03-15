@@ -192,8 +192,7 @@ class TRW(IStreamSource):
                 actionChains = ActionChains(driver)
                 actionChains.double_click(video).perform()
 
-                # Move cursor out of view (e.g., to a corner)
-                actionChains.move_by_offset(-1000, -1000).perform()
+                driver.execute_script("document.body.style.cursor = 'none';")
 
                 try:
                     driver.execute_script(
