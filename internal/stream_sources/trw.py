@@ -21,6 +21,7 @@ from internal.redis import RedisClient
 from internal.schemas import BaseChatMessage, Stream, StreamChatMessage
 from internal.stream_sources.base import IStreamSource
 from internal.utils import *
+from internal.otp_fetcher import OTPFetcher
 
 CHANNELS_TO_MONITOR = [
     "https://app.jointherealworld.com/chat/01GVZRG9K25SS9JZBAMA4GRCEF/01JDEQ9MJA984M1NSPQZGM5BZC",
@@ -49,6 +50,9 @@ class TRW(IStreamSource):
         rtmp_server_key: str,
         redis_client: RedisClient,
         openai_api_key: str,
+        otp_email: str,
+        otp_email_password: str,
+        debug: bool = False,
     ) -> None:
         self.username = username
         self.password = password
@@ -57,6 +61,8 @@ class TRW(IStreamSource):
         self.channel_stream_ids: Dict[str, str] = {}
         self.channel_last_messages: Dict[str, StreamChatMessage] = {}
         self.message_parser = MessageParser(openai_api_key)
+        self.otp_fetcher = OTPFetcher(otp_email, otp_email_password)
+        self.debug = debug
 
     def monitor_streams(self, destination_rtmp_server: str):
 
@@ -64,8 +70,8 @@ class TRW(IStreamSource):
         print_with_process_id("Initializing driver")
         display_port = f":{DISPLAY_PORT_START - 1}"
         virtual_sink_name = f"virtual_sink_trw_main"
-        driver = initialize_trw(
-            self.username, self.password, chromedriver_path, -1, virtual_sink_name, display_port,
+        driver = self.initialize_trw(
+            chromedriver_path, -1, virtual_sink_name, display_port,
         )
         i = -1
         while True:
@@ -115,12 +121,10 @@ class TRW(IStreamSource):
             except Exception as e:
                 print_with_process_id("Main process exception, restarting..." + str(e))
                 try:
-                    driver.quit()
+                    self.logout(driver)
                 except:
                     pass
-                driver = initialize_trw(
-                    self.username,
-                    self.password,
+                driver = self.initialize_trw(
                     chromedriver_path,
                     -1,
                     virtual_sink_name,
@@ -146,9 +150,7 @@ class TRW(IStreamSource):
 
             try:
 
-                driver = initialize_trw(
-                    self.username,
-                    self.password,
+                driver = self.initialize_trw(
                     chromedriver_path,
                     stream_number,
                     virtual_sink_name,
@@ -222,7 +224,7 @@ class TRW(IStreamSource):
 
                 self.redis_client.delete_stream_by_id(stream_id)
                 stream_process.kill()
-                driver.quit()
+                self.logout(driver)
                 return
             except Exception as e:
                 print_with_process_id("Error in process " + str(e))
@@ -237,7 +239,7 @@ class TRW(IStreamSource):
                 except:
                     pass
                 try:
-                    driver.quit()
+                    self.logout(driver)
                 except:
                     pass
 
@@ -312,68 +314,136 @@ class TRW(IStreamSource):
                 print_with_process_id("error parsing message " + str(e))
 
 
-def initialize_trw(
-    username: str,
-    password: str,
-    chromedriver_path: str,
-    number: str,
-    virtual_sink_name: str,
-    display_port: str,
-) -> webdriver.Chrome:
-    chrome_opt = Options()
-    print_with_process_id("Creating virtual sink")
-    create_virtual_sink(virtual_sink_name)
-    print_with_process_id("Starting xvfb")
-    start_xvfb(display_port)
-    os.environ["DISPLAY"] = display_port
-    os.environ["PULSE_SINK"] = virtual_sink_name
-    chrome_opt.add_argument("--incognito")
-    user_data_dir = f"/tmp/trw_user_data_{number}"
-    # delete dir if exists
-    if os.path.exists(user_data_dir):
-        shutil.rmtree(user_data_dir)
-    chrome_opt.add_argument("--user-data-dir=" + user_data_dir)
-    chrome_opt.add_argument(
-        "--autoplay-policy=no-user-gesture-required"
-    )  # Ensure autoplay works for audio
-    chrome_opt.add_argument("--use-fake-ui-for-media-stream")
-    chrome_opt.add_argument("--window-size=1280,720")
-    chrome_opt.add_argument("--no-sandbox")
-    chrome_opt.add_argument("--disable-dev-shm-usage")
-    chrome_opt.add_argument("--disable-renderer-backgrounding")
-    chrome_opt.add_argument("--disable-background-timer-throttling")
-    chrome_opt.add_argument("--disable-backgrounding-occluded-windows")
-    chrome_opt.add_argument("--disable-client-side-phishing-detection")
-    chrome_opt.add_argument("--disable-crash-reporter")
-    chrome_opt.add_argument("--disable-oopr-debug-crash-dump")
-    chrome_opt.add_argument("--no-crash-upload")
-    chrome_opt.add_argument("--disable-low-res-tiling")
-    chrome_opt.add_argument("--disable-gpu")
+    def initialize_trw(
+        self,
+        chromedriver_path: str,
+        number: str,
+        virtual_sink_name: str,
+        display_port: str,
+    ) -> webdriver.Chrome:
+        chrome_opt = Options()
+        if not self.debug:
+            print_with_process_id("Creating virtual sink")
+            create_virtual_sink(virtual_sink_name)
+            print_with_process_id("Starting xvfb")
+            start_xvfb(display_port)
+            os.environ["DISPLAY"] = display_port
+            os.environ["PULSE_SINK"] = virtual_sink_name
+        chrome_opt.add_argument("--incognito")
+        user_data_dir = f"/tmp/trw_user_data_{number}"
+        # delete dir if exists
+        if os.path.exists(user_data_dir):
+            shutil.rmtree(user_data_dir)
+        chrome_opt.add_argument("--user-data-dir=" + user_data_dir)
+        chrome_opt.add_argument(
+            "--autoplay-policy=no-user-gesture-required"
+        )  # Ensure autoplay works for audio
+        chrome_opt.add_argument("--use-fake-ui-for-media-stream")
+        chrome_opt.add_argument("--window-size=1280,720")
+        chrome_opt.add_argument("--no-sandbox")
+        chrome_opt.add_argument("--disable-dev-shm-usage")
+        chrome_opt.add_argument("--disable-renderer-backgrounding")
+        chrome_opt.add_argument("--disable-background-timer-throttling")
+        chrome_opt.add_argument("--disable-backgrounding-occluded-windows")
+        chrome_opt.add_argument("--disable-client-side-phishing-detection")
+        chrome_opt.add_argument("--disable-crash-reporter")
+        chrome_opt.add_argument("--disable-oopr-debug-crash-dump")
+        chrome_opt.add_argument("--no-crash-upload")
+        chrome_opt.add_argument("--disable-low-res-tiling")
+        chrome_opt.add_argument("--disable-gpu")
 
-    chrome_opt.add_experimental_option("useAutomationExtension", False)
-    chrome_opt.add_experimental_option("excludeSwitches", ["enable-automation"])
-    driver = webdriver.Chrome(options=chrome_opt, service=Service(chromedriver_path))
-    driver.maximize_window()
-    driver.get("https://app.jointherealworld.com/auth/login?a=p86p7wfnzd&subid=login")
+        chrome_opt.add_experimental_option("useAutomationExtension", False)
+        chrome_opt.add_experimental_option("excludeSwitches", ["enable-automation"])
+        driver = webdriver.Chrome(options=chrome_opt, service=Service(chromedriver_path))
+        driver.maximize_window()
+        driver.get("https://app.jointherealworld.com/auth/login?a=p86p7wfnzd&subid=login")
 
-    # login
-    driver.find_element(By.ID, "email").send_keys(username)
-    driver.find_element(By.ID, "password").send_keys(password)
-    driver.find_element(By.CLASS_NAME, "btn-primary.btn-no-effects").click()
-    print_with_process_id("logged in")
-    time.sleep(5)
+        # login
+        driver.find_element(By.ID, "email").send_keys(self.username)
+        driver.find_element(By.ID, "password").send_keys(self.password)
+        driver.find_element(By.CLASS_NAME, "btn-primary.btn-no-effects").click()
+        print_with_process_id("logged in")
+        time.sleep(5)
+        
+        # wait for 2fa popup
+        try:
+            popup = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "modal-body.relative.flex.flex-col.bg-neutral.shadow-xl"))
+            )
+            if "verification" in popup.text.lower() or "verify" in popup.text.lower():
+                print_with_process_id("2fa popup found")
+                otp_counter = 0
+                while True:
+                    time.sleep(15)
+                    otp = self.otp_fetcher.fetch_otp()
+                    if otp:
+                        print_with_process_id("got otp " + otp)
+                        break
+                    otp_counter += 1
+                    if otp_counter == 10:
+                        print_with_process_id("Waiting for two minutes but no otp found. Exiting and restarting flow...")
+                        try:
+                            self.logout()
+                        except:
+                            pass
+                        return self.initialize_trw(chromedriver_path, number, virtual_sink_name, display_port)
+                
+                popup.find_element(By.TAG_NAME, "input").send_keys(otp)
+                popup.find_element(By.CLASS_NAME, "btn.btn-primary").click()
+                time.sleep(5)
+                print_with_process_id("2fa entered")
+        except Exception as e:
+            if self.debug:
+                print_with_process_id(e)
+            print_with_process_id("2fa popup not found")
 
-    # close modal
-    try:
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "modal-body"))
-        ).find_elements(By.CLASS_NAME, "btn.btn-circle")[1].click()
-        print_with_process_id("popup closed")
-    except Exception as e:
-        print_with_process_id(e)
-        print_with_process_id("popup not found")
+        # close modal
+        try:
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "modal-body"))
+            ).find_elements(By.CLASS_NAME, "btn.btn-circle")[1].click()
+            print_with_process_id("popup closed")
+        except Exception as e:
+            print_with_process_id(e)
+            print_with_process_id("popup not found")
 
-    return driver
+        return driver
+    
+    def logout(self, driver: webdriver.Chrome):
+        driver.get("https://app.jointherealworld.com/chat/me/friends")
+        try:
+            settings_btn = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "relative.flex.items-center.gap-3.border-base-300.border-b.p-3.text-left.text-sm"))
+            )
+        except Exception as e:
+            print_with_process_id("Logout failed. Unable to find settings button")
+            driver.quit()
+            return
+        settings_btn.click()
+        time.sleep(1)
+        try:
+            logout_btn = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "btn.flex.justify-start.font-normal.normal-case.gap-2.btn-outline.btn-error.btn-block"))
+            )
+        except Exception as e:
+            print_with_process_id("Logout failed. Unable to find logout button")
+            driver.quit()
+            return
+        logout_btn.click()
+        time.sleep(1)
+        try:
+            logout_confirm_modal = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "modal-body.relative.flex.w-full.flex-col.bg-neutral"))
+            )
+            logout_confirm_btn = logout_confirm_modal.find_element(By.CLASS_NAME, "btn.btn-primary")
+        except Exception as e:
+            print_with_process_id("Logout failed. Unable to find logout confirm button")
+            driver.quit()
+            return
+        logout_confirm_btn.click()
+        time.sleep(2)
+        print_with_process_id("Logout Sucessful.")
+        driver.quit()
 
 
 def parse_message_element(message_element: WebElement) -> StreamChatMessage:

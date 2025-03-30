@@ -8,7 +8,7 @@ if __name__ == "__main__":
         redis_client = RedisClient(host=Env.REDIS_HOST, port=Env.REDIS_PORT)
         redis_client.delete_all_streams()
 
-        trw = TRW(Env.TRW_EMAIL, Env.TRW_PASSWORD, Env.RTMP_SERVER_KEY, redis_client, Env.OPENAI_API_KEY)
+        trw = TRW(Env.TRW_EMAIL, Env.TRW_PASSWORD, Env.RTMP_SERVER_KEY, redis_client, Env.OPENAI_API_KEY, Env.OTP_EMAIL, Env.OTP_EMAIL_PASSWORD, Env.DEBUG)
         trw.monitor_streams(Env.RTMP_SERVER)
     finally:
         redis_client.delete_all_streams()

@@ -25,6 +25,9 @@ class AppEnv:
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     OPENAI_API_KEY: str
+    OTP_EMAIL: str
+    OTP_EMAIL_PASSWORD: str
+    DEBUG: bool = False
 
     """
     Map environment variables to class fields according to these rules:
