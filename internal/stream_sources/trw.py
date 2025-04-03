@@ -411,6 +411,7 @@ class TRW(IStreamSource):
     
     def logout(self, driver: webdriver.Chrome):
         driver.get("https://app.jointherealworld.com/chat/me/friends")
+        time.sleep(2)
         try:
             settings_btn = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "relative.flex.items-center.gap-3.border-base-300.border-b.p-3.text-left.text-sm"))
@@ -420,7 +421,7 @@ class TRW(IStreamSource):
             driver.quit()
             return
         settings_btn.click()
-        time.sleep(1)
+        time.sleep(2)
         try:
             logout_btn = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "btn.flex.justify-start.font-normal.normal-case.gap-2.btn-outline.btn-error.btn-block"))
@@ -430,7 +431,7 @@ class TRW(IStreamSource):
             driver.quit()
             return
         logout_btn.click()
-        time.sleep(1)
+        time.sleep(2)
         try:
             logout_confirm_modal = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "modal-body.relative.flex.w-full.flex-col.bg-neutral"))
@@ -441,7 +442,7 @@ class TRW(IStreamSource):
             driver.quit()
             return
         logout_confirm_btn.click()
-        time.sleep(2)
+        time.sleep(5)
         print_with_process_id("Logout Sucessful.")
         driver.quit()
 
