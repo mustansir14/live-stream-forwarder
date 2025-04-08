@@ -4,6 +4,8 @@ import shutil
 import time
 import uuid
 from typing import Dict, Generator, List
+import json
+import requests
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -410,39 +412,27 @@ class TRW(IStreamSource):
         return driver
     
     def logout(self, driver: webdriver.Chrome):
-        driver.get("https://app.jointherealworld.com/chat/me/friends")
-        time.sleep(2)
-        try:
-            settings_btn = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "relative.flex.items-center.gap-3.border-base-300.border-b.p-3.text-left.text-sm"))
-            )
-        except Exception as e:
-            print_with_process_id("Logout failed. Unable to find settings button")
-            driver.quit()
+        token = json.loads(driver.execute_script("return window.localStorage.getItem(\"rauth\");")).get("token")
+        if not token:
+            print_with_process_id("Token not found")
             return
-        settings_btn.click()
-        time.sleep(2)
-        try:
-            logout_btn = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "btn.flex.justify-start.font-normal.normal-case.gap-2.btn-outline.btn-error.btn-block"))
-            )
-        except Exception as e:
-            print_with_process_id("Logout failed. Unable to find logout button")
-            driver.quit()
+        url = "https://api.therealworld.ag/auth/session/logout"
+
+        headers = {
+            'sec-ch-ua-platform': '"Linux"',
+            'Referer': 'https://app.jointherealworld.com/',
+            'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            'sec-ch-ua-mobile': '?0',
+            'X-Session-Token': token,
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'X-Client-Version': '2.5.338'
+        }
+
+        response = requests.request("POST", url, headers=headers)
+        if response.status_code != 204:
+            print_with_process_id("Logout failed with status code: " + str(response.status_code))
             return
-        logout_btn.click()
-        time.sleep(2)
-        try:
-            logout_confirm_modal = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "modal-body.relative.flex.w-full.flex-col.bg-neutral"))
-            )
-            logout_confirm_btn = logout_confirm_modal.find_element(By.CLASS_NAME, "btn.btn-primary")
-        except Exception as e:
-            print_with_process_id("Logout failed. Unable to find logout confirm button")
-            driver.quit()
-            return
-        logout_confirm_btn.click()
-        time.sleep(5)
         print_with_process_id("Logout Sucessful.")
         driver.quit()
 
