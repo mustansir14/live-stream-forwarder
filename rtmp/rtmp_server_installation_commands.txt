@@ -1,0 +1,86 @@
+sudo apt update && sudo apt upgrade
+sudo apt install nginx
+sudo add-apt-repository universe
+sudo apt install libnginx-mod-rtmp
+sudo nano /etc/nginx/nginx.conf
+sudo systemctl restart nginx
+cat /etc/nginx/nginx.conf
+python
+python3
+ls
+nano authentication.py
+pip install fastapi uvicorn
+pip3 install fastapi uvicorn
+sudo apt install python3-pip
+pip install fastapi uvicorn
+ls
+python3 -m venv venv
+sudo apt install python3.12-venv
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn
+uvicorn authentication:app --host 0.0.0.0 --port 8000
+sudo apt install supervisor
+nanp /etc/supervisor/conf.d/fastapi.conf
+nano /etc/supervisor/conf.d/authentication.conf
+sudo supervisorctl reload
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start authentication
+nano /etc/supervisor/conf.d/authentication.conf
+~/venv/bin/uvicorn authentication:app --host 0.0.0.0 --port 8000
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start authentication
+nano /etc/supervisor/conf.d/authentication.conf
+pwd
+cd /root
+ls
+pwd
+nano /etc/supervisor/conf.d/authentication.conf
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start authentication
+curl -X POST http://yourdomain.com/authenticate -F "key=your_secret_key"
+curl -X POST http://localhost/authenticate -F "key=your_secret_key"
+curl -X POST http://localhost:8000/authenticate -F "key=your_secret_key"
+nano authentication.py 
+rm authentication.py
+nano authentication.py
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start authentication
+curl -X POST http://localhost:8000/authenticate?key=your_secret_key
+cat /var/log/authentication.err.log 
+cat /var/log/authentication.out.log 
+sudo supervisorctl reload
+sudo supervisorctl start authentication
+curl -X POST http://localhost:8000/authenticate?key=your_secret_key
+nano authentication.py 
+sudo supervisorctl reload
+curl -X POST "http://localhost:8000/authenticate?key=4QOtJYZtBNXYZqGt
+"
+curl -X POST "http://localhost:8000/authenticate?key=4QOtJYZtBNXYZqGt"
+sudo nano /etc/nginx/nginx.conf
+sudo systemctl restart nginx
+systemctl status nginx.serice
+systemctl status nginx.service
+sudo nano /etc/nginx/nginx.conf
+sudo systemctl restart nginx
+sudo nano /etc/nginx/nginx.conf
+sudo systemctl restart nginx
+cat /var/log/authentication.err.log 
+cat /var/log/authentication.out.log 
+nano authentication.py 
+rm authentication.py 
+nano authentication.py
+pip install python-multipart
+sudo supervisortl reload
+sudo supervisorctl reload
+sudo supervisorctl update
+sudo supervisorctl start authentication
+cat /var/log/authentication.out.log 
+sudo nano /etc/nginx/nginx.conf
+sudo systemctl restart nginx
+ps -ef | grep pulseaudio
+pactl
