@@ -4,8 +4,7 @@ from typing import List
 
 from openai import OpenAI
 
-from internal.enums import StreamSource
-from internal.schemas import UpcomingStream
+from internal.schemas import TRWUpcomingStream
 
 
 class MessageParser:
@@ -13,7 +12,7 @@ class MessageParser:
     def __init__(self, openai_api_key: str):
         self.client = OpenAI(api_key=openai_api_key)
 
-    def parse(self, message: str, source: StreamSource) -> List[UpcomingStream]:
+    def parse(self, message: str) -> List[TRWUpcomingStream]:
         prompt = """Your task is to extract information about an upcoming live stream from the provided message. The task involves identifying upcoming live streams and extracting their starting time information.
 
 ### Steps:
@@ -76,10 +75,9 @@ Message:
                 start_time = datetime.fromisoformat(stream["start_time_absolute"])
             elif "start_time_relative" in stream:
                 start_time += timedelta(seconds=int(stream["start_time_relative"]))
-            upcoming_stream = UpcomingStream(
+            upcoming_stream = TRWUpcomingStream(
                 name=stream["name"],
                 start_time=round_to_nearest_15_minutes(start_time),
-                source=source,
             )
             upcoming_streams.append(upcoming_stream)
         return upcoming_streams

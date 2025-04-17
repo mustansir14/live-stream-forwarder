@@ -4,3 +4,7 @@ class BaseStreamSourceException(Exception):
 
 class StreamNotFound(BaseStreamSourceException):
     """Stream not found exception"""
+
+
+class UnexpectedResponse(BaseStreamSourceException):
+    """Unexpected response exception"""

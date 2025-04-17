@@ -17,10 +17,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from internal.enums import StreamSource
 from internal.message_parser import MessageParser
 from internal.redis import RedisClient
-from internal.schemas import BaseChatMessage, Stream, StreamChatMessage
+from internal.schemas import BaseChatMessage, TRWStream, TRWStreamChatMessage
 from internal.stream_sources.base import IStreamSource
 from internal.utils import *
 from internal.otp_fetcher import OTPFetcher
@@ -50,6 +49,7 @@ class TRW(IStreamSource):
         username: str,
         password: str,
         rtmp_server_key: str,
+        destination_rtmp_server: str,
         redis_client: RedisClient,
         openai_api_key: str,
         otp_email: str,
@@ -59,14 +59,15 @@ class TRW(IStreamSource):
         self.username = username
         self.password = password
         self.rtmp_server_key = rtmp_server_key
+        self.destination_rtmp_server = destination_rtmp_server
         self.redis_client = redis_client
         self.channel_stream_ids: Dict[str, str] = {}
-        self.channel_last_messages: Dict[str, StreamChatMessage] = {}
+        self.channel_last_messages: Dict[str, TRWStreamChatMessage] = {}
         self.message_parser = MessageParser(openai_api_key)
         self.otp_fetcher = OTPFetcher(otp_email, otp_email_password)
         self.debug = debug
 
-    def monitor_streams(self, destination_rtmp_server: str):
+    def monitor_streams(self):
 
         chromedriver_path = ChromeDriverManager().install()
         print_with_process_id("Initializing driver")
@@ -83,7 +84,7 @@ class TRW(IStreamSource):
 
                 # if stream already running, skip
                 stream_id = self.channel_stream_ids.get(channel)
-                if stream_id and self.redis_client.get_running_stream(stream_id):
+                if stream_id and self.redis_client.get_trw_running_stream(stream_id):
                     print_with_process_id("stream already running")
                     continue
 
@@ -113,7 +114,7 @@ class TRW(IStreamSource):
                     target=self.__start_stream,
                     args=(
                         stream_id,
-                        destination_rtmp_server,
+                        self.destination_rtmp_server,
                         channel,
                         chromedriver_path,
                         i,
@@ -206,11 +207,10 @@ class TRW(IStreamSource):
                     pass
 
                 stream_url = destination_rtmp_server + "/" + stream_id
-                stream = Stream(
+                stream = TRWStream(
                     id=stream_id,
                     name=stream_name,
                     url=stream_url,
-                    source=StreamSource.TRW,
                 )
                 print_with_process_id("Relaying stream to destination")
                 stream_process = relay_stream_to_destination(
@@ -218,13 +218,13 @@ class TRW(IStreamSource):
                     virtual_sink_name,
                     display_port,
                 )
-                self.redis_client.add_running_stream(stream)
+                self.redis_client.add_trw_running_stream(stream)
                 # stream_process.wait()
 
                 for stream_message in self.__get_stream_messages(driver, video):
-                    self.redis_client.enqueue_stream_message(stream_id, stream_message)
+                    self.redis_client.enqueue_trw_stream_message(stream_id, stream_message)
 
-                self.redis_client.delete_stream_by_id(stream_id)
+                self.redis_client.delete_trw_stream_by_id(stream_id)
                 stream_process.kill()
                 self.logout(driver)
                 return
@@ -237,7 +237,7 @@ class TRW(IStreamSource):
                     except:
                         pass
                 try:
-                    self.redis_client.delete_stream_by_id(stream_id)
+                    self.redis_client.delete_trw_stream_by_id(stream_id)
                 except:
                     pass
                 try:
@@ -249,7 +249,7 @@ class TRW(IStreamSource):
         self,
         driver: webdriver.Chrome,
         video: WebElement,
-    ) -> Generator[StreamChatMessage, None, None]:
+    ) -> Generator[TRWStreamChatMessage, None, None]:
 
         existing_messages_elements = get_chat_messages(driver)
         for message in existing_messages_elements:
@@ -308,10 +308,10 @@ class TRW(IStreamSource):
                 if channel_last_message and message.id == channel_last_message.id:
                     break
 
-                upcoming_streams = self.message_parser.parse(message, StreamSource.TRW)
+                upcoming_streams = self.message_parser.parse(message)
                 for upcoming_stream in upcoming_streams:
                     print_with_process_id("found upcoming stream " + str(upcoming_stream))
-                    self.redis_client.add_upcoming_stream(upcoming_stream)
+                    self.redis_client.add_trw_upcoming_stream(upcoming_stream)
             except Exception as e:
                 print_with_process_id("error parsing message " + str(e))
 
@@ -437,9 +437,9 @@ class TRW(IStreamSource):
         driver.quit()
 
 
-def parse_message_element(message_element: WebElement) -> StreamChatMessage:
+def parse_message_element(message_element: WebElement) -> TRWStreamChatMessage:
 
-    message = StreamChatMessage(
+    message = TRWStreamChatMessage(
         id=message_element.get_attribute("id"),
         message=message_element.find_element(
             By.CLASS_NAME, "custom-break-words.break-words.text-sm"
@@ -481,7 +481,7 @@ def wait_for_stream(driver: webdriver.Chrome) -> WebElement:
 
 
 def print_with_process_id(message: str):
-    print(f"[{os.getpid()}] {message}")
+    print(f"TRW [{os.getpid()}] {message}")
 
 
 def get_chat_messages(driver: webdriver.Chrome) -> List[WebElement]:

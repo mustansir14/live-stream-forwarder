@@ -3,7 +3,7 @@ from typing import List
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 
-from internal.schemas import StreamChatMessage
+from internal.schemas import TRWStreamChatMessage
 
 
 # A manager to keep track of connected WebSocket clients
@@ -19,7 +19,7 @@ class ConnectionManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
-    async def broadcast(self, message: StreamChatMessage):
+    async def broadcast(self, message: TRWStreamChatMessage):
         for connection in self.active_connections:
             if connection.application_state == WebSocketState.CONNECTED:
                 try:

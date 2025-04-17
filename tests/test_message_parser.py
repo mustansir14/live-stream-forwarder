@@ -1,10 +1,9 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from internal.enums import StreamSource
 from internal.env import Env
 from internal.message_parser import MessageParser, round_to_nearest_15_minutes
-from internal.schemas import UpcomingStream
+from internal.schemas import TRWUpcomingStream
 
 
 class TestMessageParser(unittest.TestCase):
@@ -20,20 +19,17 @@ Crypto Investing Analysis 20th January 2025
 (If you miss this stream, it will be reposted in #｜Daily Investing Analysis for 24 hours)
 ⠀
 No external link - Watch the stream here in TRW app.""",
-                "source": StreamSource.TRW,
                 "expected_output": [
-                    UpcomingStream(
+                    TRWUpcomingStream(
                         name="Crypto Investing Analysis",
                         start_time=round_to_nearest_15_minutes(
                             datetime.now(timezone.utc) + timedelta(minutes=5)
                         ),
-                        source=StreamSource.TRW,
                     )
                 ],
             },
             {
                 "message": "Taking any questions now discussed in the stream.",
-                "source": StreamSource.TRW,
                 "expected_output": [],
             },
             {
@@ -47,14 +43,12 @@ And on today's POWER UP CALL I'll show you how to take that compelling vision an
 This is the second half of the missing personal leadership you didn't have in 2024
 Come ready to WORK
 When: Today 11:00 am EST, 4:00 pm UTC""",
-                "source": StreamSource.TRW,
                 "expected_output": [
-                    UpcomingStream(
+                    TRWUpcomingStream(
                         name="POWER UP CALL",
                         start_time=datetime.now(timezone.utc).replace(
                             hour=16, minute=0, second=0, microsecond=0
                         ),
-                        source=StreamSource.TRW,
                     )
                 ],
             },
@@ -62,39 +56,33 @@ When: Today 11:00 am EST, 4:00 pm UTC""",
                 "message": """DAILY PRODUCT ANALYSIS LIVE PREMIERE - Hey @Students. Join me in 30 minutes for the first episode of the new Daily Product Analysis series.
 
 There will be a watch-party hosted in the #live-streams channel. Don't miss it!""",
-                "source": StreamSource.TRW,
                 "expected_output": [
-                    UpcomingStream(
+                    TRWUpcomingStream(
                         name="Daily Product Analysis",
                         start_time=round_to_nearest_15_minutes(
                             datetime.now(timezone.utc) + timedelta(minutes=30)
                         ),
-                        source=StreamSource.TRW,
                     )
                 ],
             },
             {
                 "message": """Last nights 4pm stream was great. Thank you guys for joining.""",
-                "source": StreamSource.TRW,
                 "expected_output": [],
             },
             {
                 "message": """Last nights 4pm stream was great. Thank you guys for joining. The next Live Trading streams will be tomorrow at noon and then at evening at 5.""",
-                "source": StreamSource.TRW,
                 "expected_output": [
-                    UpcomingStream(
+                    TRWUpcomingStream(
                         name="Live Trading",
                         start_time=(
                             datetime.now(timezone.utc) + timedelta(days=1)
                         ).replace(hour=12, minute=0, second=0, microsecond=0),
-                        source=StreamSource.TRW,
                     ),
-                    UpcomingStream(
+                    TRWUpcomingStream(
                         name="Live Trading",
                         start_time=(
                             datetime.now(timezone.utc) + timedelta(days=1)
                         ).replace(hour=17, minute=0, second=0, microsecond=0),
-                        source=StreamSource.TRW,
                     ),
                 ],
             },
@@ -103,7 +91,7 @@ There will be a watch-party hosted in the #live-streams channel. Don't miss it!"
         message_parser = MessageParser(openai_api_key=Env.OPENAI_API_KEY)
         for case in cases:
             self.assertEqual(
-                message_parser.parse(case["message"], case["source"]),
+                message_parser.parse(case["message"]),
                 case["expected_output"],
             )
 
