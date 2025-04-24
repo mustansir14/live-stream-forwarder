@@ -4,7 +4,7 @@ from typing import List
 
 from openai import OpenAI
 
-from internal.schemas import TRWUpcomingStream
+from internal.schemas import TRWUpcomingStream, TRWCampus
 
 
 class MessageParser:
@@ -12,7 +12,7 @@ class MessageParser:
     def __init__(self, openai_api_key: str):
         self.client = OpenAI(api_key=openai_api_key)
 
-    def parse(self, message: str) -> List[TRWUpcomingStream]:
+    def parse(self, message: str, campus: TRWCampus) -> List[TRWUpcomingStream]:
         prompt = """Your task is to extract information about an upcoming live stream from the provided message. The task involves identifying upcoming live streams and extracting their starting time information.
 
 ### Steps:
@@ -78,6 +78,7 @@ Message:
             upcoming_stream = TRWUpcomingStream(
                 name=stream["name"],
                 start_time=round_to_nearest_15_minutes(start_time),
+                campus=campus,
             )
             upcoming_streams.append(upcoming_stream)
         return upcoming_streams

@@ -1,23 +1,42 @@
+from enum import Enum
 from datetime import datetime, timezone, date
 
 from pydantic import BaseModel
 
 
-class StreamBase(BaseModel):
-    name: str
+class TRWCampus(str, Enum):
+    BUSINESS_MASTERY = "BUSINESS_MASTERY"
+    CRYPTO_CURRENCY_INVESTING = "CRYPTO_CURRENCY_INVESTING"
+    COPYWRITING = "COPYWRITING"
+    STOCKS = "STOCKS"
+    CRYPTO_TRADING = "CRYPTO_TRADING"
+    ECOMMERCE = "ECOMMERCE"
+    SOCIAL_MEDIA_CLIENT_ACQUISITION = "SOCIAL_MEDIA_CLIENT_ACQUISITION"
+    AI_AUTOMATION_AGENCY = "AI_AUTOMATION_AGENCY"
+    CRYPTO_DEFI = "CRYPTO_DEFI"
+    CONTENT_CREATION_AI_CAMPUS = "CONTENT_CREATION_AI_CAMPUS"
+    HUSTLERS_CAMPUS = "HUSTLERS_CAMPUS"
+    THE_REAL_WORLD = "THE_REAL_WORLD"
+    HEALTH_FITNESS = "HEALTH_FITNESS"
 
 
-class TRWStream(StreamBase):
+
+class TRWStream(BaseModel):
     id: str
+    name: str
     url: str
+    campus: TRWCampus
 
 
-class DudestreamStream(TRWStream):
+class DudestreamStream(BaseModel):
+    name: str
     date: date
     category: str
 
-class TRWUpcomingStream(StreamBase):
+class TRWUpcomingStream(BaseModel):
+    name: str
     start_time: datetime
+    campus: TRWCampus
 
     def is_expired(self) -> bool:
         return self.start_time < datetime.now(timezone.utc)

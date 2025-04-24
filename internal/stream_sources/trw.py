@@ -19,24 +19,25 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from internal.message_parser import MessageParser
 from internal.redis import RedisClient
-from internal.schemas import BaseChatMessage, TRWStream, TRWStreamChatMessage
+from internal.schemas import BaseChatMessage, TRWStream, TRWStreamChatMessage, TRWCampus
 from internal.stream_sources.base import IStreamSource
 from internal.utils import *
 from internal.otp_fetcher import OTPFetcher
 
 CHANNELS_TO_MONITOR = [
-    "https://app.jointherealworld.com/chat/01GVZRG9K25SS9JZBAMA4GRCEF/01JDEQ9MJA984M1NSPQZGM5BZC",
-    "https://app.jointherealworld.com/chat/01GGDHGV32QWPG7FJ3N39K4FME/01GHHNFJ8H56EY45HTHESZTZGJ",
-    "https://app.jointherealworld.com/chat/01GGDHGYWCHJD6DSZWGGERE3KZ/01GHHMNMCRY7YMRWD9MQPJ2H0Q",
-    "https://app.jointherealworld.com/chat/01GGDHHZ377R1S4G4R6E29247S/01GHSBDYFPFBMQ1Y8B787ANNFA",
-    "https://app.jointherealworld.com/chat/01GW4K82142Y9A465QDA3C7P44/01GKDTJZ2YCBW2FJKEN99F2NEQ",
-    "https://app.jointherealworld.com/chat/01GGDHHAR4MJXXKW3MMN85FY8C/01GHK58VJV5AV7T1DY83PGKSJW",
-    "https://app.jointherealworld.com/chat/01GGDHHJJW5MQZBE0NPERYE8E7/01GHP2BTZKB71RJRQ48KN5KK7G",
-    "https://app.jointherealworld.com/chat/01HZFA8C65G7QS2DQ5XZ2RNBFP/01GXNM8K22ZV1Q2122RC47R9AF",
-    "https://app.jointherealworld.com/chat/01GW4K766W7A5N6PWV2YCX0GZP/01GKDTKWTF7KWYQM9JPZNDE5E8",
-    "https://app.jointherealworld.com/chat/01GXNJTRFK41EHBK63W4M5H74M/01GXNM8K22ZV1Q2122RC47R9AF",
-    "https://app.jointherealworld.com/chat/01HSRZK1WHNV787DBPYQYN44ZS/01HST8F8W7P3VYBXCSDAVSS0GF",
-    "https://app.jointherealworld.com/chat/01GGDHJAQMA1D0VMK8WV22BJJN/01J4RER9MEEWZSV4R14AP1WXGT",
+    (TRWCampus.BUSINESS_MASTERY, "https://app.jointherealworld.com/chat/01GVZRG9K25SS9JZBAMA4GRCEF/01JDEQ9MJA984M1NSPQZGM5BZC"),
+    (TRWCampus.CRYPTO_CURRENCY_INVESTING, "https://app.jointherealworld.com/chat/01GGDHGV32QWPG7FJ3N39K4FME/01GHHNFJ8H56EY45HTHESZTZGJ"),
+    (TRWCampus.COPYWRITING, "https://app.jointherealworld.com/chat/01GGDHGYWCHJD6DSZWGGERE3KZ/01GHHMNMCRY7YMRWD9MQPJ2H0Q"),
+    (TRWCampus.STOCKS, "https://app.jointherealworld.com/chat/01GGDHHZ377R1S4G4R6E29247S/01GHSBDYFPFBMQ1Y8B787ANNFA"),
+    (TRWCampus.CRYPTO_TRADING, "https://app.jointherealworld.com/chat/01GW4K82142Y9A465QDA3C7P44/01GKDTJZ2YCBW2FJKEN99F2NEQ"),
+    (TRWCampus.ECOMMERCE, "https://app.jointherealworld.com/chat/01GGDHHAR4MJXXKW3MMN85FY8C/01GHK58VJV5AV7T1DY83PGKSJW"),
+    (TRWCampus.SOCIAL_MEDIA_CLIENT_ACQUISITION, "https://app.jointherealworld.com/chat/01GGDHHJJW5MQZBE0NPERYE8E7/01GHP2BTZKB71RJRQ48KN5KK7G"),
+    (TRWCampus.AI_AUTOMATION_AGENCY, "https://app.jointherealworld.com/chat/01HZFA8C65G7QS2DQ5XZ2RNBFP/01GXNM8K22ZV1Q2122RC47R9AF"),
+    (TRWCampus.CRYPTO_DEFI, "https://app.jointherealworld.com/chat/01GW4K766W7A5N6PWV2YCX0GZP/01GKDTKWTF7KWYQM9JPZNDE5E8"),
+    (TRWCampus.CONTENT_CREATION_AI_CAMPUS, "https://app.jointherealworld.com/chat/01GXNJTRFK41EHBK63W4M5H74M/01GXNM8K22ZV1Q2122RC47R9AF"),
+    (TRWCampus.HUSTLERS_CAMPUS, "https://app.jointherealworld.com/chat/01HSRZK1WHNV787DBPYQYN44ZS/01HST8F8W7P3VYBXCSDAVSS0GF"),
+    (TRWCampus.THE_REAL_WORLD, "https://app.jointherealworld.com/chat/01GGDHJAQMA1D0VMK8WV22BJJN/01J4RER9MEEWZSV4R14AP1WXGT"),
+    (TRWCampus.HEALTH_FITNESS, "https://app.jointherealworld.com/chat/01GVZRNVT519Q67C8BQGJHRDBY/01HPPX86PZ4QMEAZ35SZTBVGR6")
 ]
 
 DISPLAY_PORT_START = 100
@@ -80,7 +81,10 @@ class TRW(IStreamSource):
         while True:
             try:
                 i = (i + 1) % len(CHANNELS_TO_MONITOR)
-                channel = CHANNELS_TO_MONITOR[i]
+                campus_channel = CHANNELS_TO_MONITOR[i]
+                campus = campus_channel[0]
+                channel = campus_channel[1]
+
 
                 # if stream already running, skip
                 stream_id = self.channel_stream_ids.get(channel)
@@ -103,7 +107,7 @@ class TRW(IStreamSource):
                 finally:
                     driver.save_screenshot("test.png")
                     # check for upcoming stream messages
-                    self.__check_upcoming_stream_messages(driver, channel)
+                    self.__check_upcoming_stream_messages(driver, channel, campus)
 
                 print_with_process_id("stream found")
 
@@ -116,6 +120,7 @@ class TRW(IStreamSource):
                         stream_id,
                         self.destination_rtmp_server,
                         channel,
+                        campus,
                         chromedriver_path,
                         i,
                     ),
@@ -139,6 +144,7 @@ class TRW(IStreamSource):
         stream_id: str,
         destination_rtmp_server: str,
         channel: str,
+        campus,
         chromedriver_path: str,
         stream_number: int,
     ) -> None:
@@ -211,6 +217,7 @@ class TRW(IStreamSource):
                     id=stream_id,
                     name=stream_name,
                     url=stream_url,
+                    campus=campus,
                 )
                 print_with_process_id("Relaying stream to destination")
                 stream_process = relay_stream_to_destination(
@@ -289,7 +296,7 @@ class TRW(IStreamSource):
             time.sleep(0.5)
 
     def __check_upcoming_stream_messages(
-        self, driver: webdriver.Chrome, channel: str
+        self, driver: webdriver.Chrome, channel: str, campus: TRWCampus
     ) -> None:
         chat_messages = get_chat_messages(driver)
         chat_messages.reverse()
@@ -308,7 +315,7 @@ class TRW(IStreamSource):
                 if channel_last_message and message.id == channel_last_message.id:
                     break
 
-                upcoming_streams = self.message_parser.parse(message)
+                upcoming_streams = self.message_parser.parse(message, campus)
                 for upcoming_stream in upcoming_streams:
                     print_with_process_id("found upcoming stream " + str(upcoming_stream))
                     self.redis_client.add_trw_upcoming_stream(upcoming_stream)
