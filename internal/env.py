@@ -28,6 +28,7 @@ class AppEnv:
     OTP_EMAIL: str
     OTP_EMAIL_PASSWORD: str
     DEBUG: bool = False
+    DATABASE_URL: str
 
     """
     Map environment variables to class fields according to these rules:

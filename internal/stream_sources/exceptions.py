@@ -8,3 +8,7 @@ class StreamNotFound(BaseStreamSourceException):
 
 class UnexpectedResponse(BaseStreamSourceException):
     """Unexpected response exception"""
+
+
+class PageNotFound(BaseStreamSourceException):
+    """Page not found exception"""
