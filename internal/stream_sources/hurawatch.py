@@ -7,6 +7,7 @@ from sqlalchemy import select
 import requests
 from bs4 import BeautifulSoup
 from typing import List
+import time
 
 MOVIES_URL = "https://hurawatch.vip/movies/page/%d"
 TV_SHOWS_URL = "https://hurawatch.vip/tv-shows/page/%d"
@@ -20,8 +21,12 @@ class Hurawatch(IStreamSource):
         self.db_session = db_session
 
     def monitor_streams(self):
-        self.__scrape_movies()
-        self.__scrape_tv_shows()
+        while True:
+            self.__scrape_movies()
+            self.__scrape_tv_shows()
+            print_with_hurawatch_prefix(f"Movies and Tv shows synced. Sleeping for 6 hours.")
+            time.sleep(21600)  # Sleep for 6 minutes before checking again
+
     
     def __scrape_movies(self) -> None:
         page = 1
