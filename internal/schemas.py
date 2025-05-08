@@ -1,5 +1,6 @@
 from enum import Enum
 from datetime import datetime, timezone, date
+from typing import List
 
 from pydantic import BaseModel
 
@@ -50,3 +51,22 @@ class TRWStreamChatMessage(BaseChatMessage):
     id: str
     time: str
     reply_to: BaseChatMessage | None
+ 
+
+class HurawatchMovieSchema(BaseModel):
+    id: int
+    title: str
+    movie_embed_url: str | None
+    thumbnail_url: str
+    storyline: str | None
+    directors: str | None
+    writers: str | None
+    stars: str | None
+    is_movie: bool
+    genres: List[str]
+    episode_embed_urls: List[str]
+
+class HurawatchMoviesResponse(BaseModel):
+    hurawatch_movies: List[HurawatchMovieSchema]
+    page: int
+    total_pages: int

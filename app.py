@@ -3,12 +3,17 @@
 import asyncio
 from typing import List
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select, func
+from sqlalchemy.orm import Session
 
+from internal.database import init_db
+from internal.dependencies import get_session
 from internal.env import Env
+from internal.models.hurawatch import HuraWatchMovie, HuraWatchGenre
 from internal.redis import RedisClient
-from internal.schemas import TRWStream, TRWUpcomingStream, DudestreamStream
+from internal.schemas import TRWStream, TRWUpcomingStream, DudestreamStream, HurawatchMoviesResponse, HurawatchMovieSchema
 from internal.websocket import ConnectionManager
 
 app = FastAPI()
@@ -25,6 +30,7 @@ app.add_middleware(
 )
 
 redis_client = RedisClient(host=Env.REDIS_HOST, port=Env.REDIS_PORT)
+init_db()
 
 
 @app.get("/trw-running-streams", response_model=List[TRWStream])
@@ -50,6 +56,56 @@ async def get_trw_upcoming_streams():
 @app.get("/dudestream-streams", response_model=List[DudestreamStream])
 async def get_dudestream_streams():
     return redis_client.get_dudestream_streams()
+
+
+@app.get("/hurawatch-movies", response_model=HurawatchMoviesResponse)
+async def get_hurawatch_movies(page: int = None, is_movie: bool = None, genre: str = None, session: Session = Depends(get_session)):
+
+    query = select(HuraWatchMovie)
+    count_query = select(func.count(HuraWatchMovie.id))
+    if is_movie is not None:
+        query = query.where(HuraWatchMovie.is_movie == is_movie)
+        count_query = count_query.where(HuraWatchMovie.is_movie == is_movie)
+    if genre:
+        query = query.join(HuraWatchGenre, HuraWatchMovie.genres).where(HuraWatchGenre.name == genre)
+        count_query = count_query.join(HuraWatchGenre, HuraWatchMovie.genres).where(HuraWatchGenre.name == genre)
+
+    if page > 0:
+        page = page
+    else:
+        page = 1
+    
+    records_per_page = 12
+    total_records = session.execute(count_query).scalar_one()
+    # total_records = 100
+    total_pages = (total_records + records_per_page - 1) // records_per_page
+    query = query.offset((page - 1) * records_per_page).limit(records_per_page)   
+    movies = session.scalars(query).all()
+
+    response_movies = []
+    for movie in movies:
+        episode_embed_urls = []
+        for episode in movie.episodes:
+            episode_embed_urls.append(episode.embed_url)
+        response_movies.append(HurawatchMovieSchema(
+            id=movie.id,
+            title=movie.title,
+            movie_embed_url=movie.movie_embed_url,
+            thumbnail_url=movie.thumbnail_url,
+            storyline=movie.storyline,
+            directors=movie.directors,
+            writers=movie.writers,
+            stars=movie.stars,
+            is_movie=movie.is_movie,
+            genres=[genre.name for genre in movie.genres],
+            episode_embed_urls=episode_embed_urls
+        ))
+
+    return HurawatchMoviesResponse(
+        hurawatch_movies=response_movies,
+        page=page,
+        total_pages=total_pages
+    )
 
 
 manager = ConnectionManager()
