@@ -1,8 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Table, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+from internal.models.base import Base
 
 # Association table for many-to-many relationship
 movie_genre_association = Table(

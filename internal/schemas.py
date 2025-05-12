@@ -70,3 +70,22 @@ class HurawatchMoviesResponse(BaseModel):
     hurawatch_movies: List[HurawatchMovieSchema]
     page: int
     total_pages: int
+
+class LibgenBookSchema(BaseModel):
+    id: int
+    topic_name: str
+    subtopic_name: str
+    authors: str
+    title: str
+    publisher: str
+    year: str
+    pages: str
+    size: str
+    extension: str
+    language: str
+    download_link: str
+
+class LibgenBooksResponse(BaseModel):
+    libgen_books: List[LibgenBookSchema]
+    page: int
+    total_pages: int

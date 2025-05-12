@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from internal.models.hurawatch import Base
+from internal.models.base import Base
 from internal.env import Env
 
 # Create the SQLAlchemy engine

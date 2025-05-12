@@ -12,8 +12,9 @@ from internal.database import init_db
 from internal.dependencies import get_session
 from internal.env import Env
 from internal.models.hurawatch import HuraWatchMovie, HuraWatchGenre
+from internal.models.libgen import LibgenBook, LibgenTopic
 from internal.redis import RedisClient
-from internal.schemas import TRWStream, TRWUpcomingStream, DudestreamStream, HurawatchMoviesResponse, HurawatchMovieSchema
+from internal.schemas import TRWStream, TRWUpcomingStream, DudestreamStream, HurawatchMoviesResponse, HurawatchMovieSchema, LibgenBookSchema, LibgenBooksResponse
 from internal.websocket import ConnectionManager
 
 app = FastAPI()
@@ -77,7 +78,6 @@ async def get_hurawatch_movies(page: int = None, is_movie: bool = None, genre: s
     
     records_per_page = 12
     total_records = session.execute(count_query).scalar_one()
-    # total_records = 100
     total_pages = (total_records + records_per_page - 1) // records_per_page
     query = query.offset((page - 1) * records_per_page).limit(records_per_page)   
     movies = session.scalars(query).all()
@@ -103,6 +103,53 @@ async def get_hurawatch_movies(page: int = None, is_movie: bool = None, genre: s
 
     return HurawatchMoviesResponse(
         hurawatch_movies=response_movies,
+        page=page,
+        total_pages=total_pages
+    )
+
+@app.get("/libgen-books", response_model=LibgenBooksResponse)
+async def get_libgen_movies(page: int = None, topic: str = None, subtopic: str = None, session: Session = Depends(get_session)):
+    query = select(LibgenBook)
+    count_query = select(func.count(LibgenBook.id))
+    if topic:
+        query = query.join(LibgenTopic).where(LibgenTopic.parent.has(name=topic))
+        count_query = count_query.join(LibgenTopic).where(LibgenTopic.parent.has(name=topic))
+    if subtopic:
+        query = query.join(LibgenTopic).where(LibgenTopic.name == subtopic)
+        count_query = count_query.join(LibgenTopic).where(LibgenTopic.name == subtopic)
+
+    if page > 0:
+        page = page
+    else:
+        page = 1
+    
+    records_per_page = 12
+    total_records = session.execute(count_query).scalar_one()
+    total_pages = (total_records + records_per_page - 1) // records_per_page
+    query = query.offset((page - 1) * records_per_page).limit(records_per_page)   
+    books = session.scalars(query).all()
+
+    response_books = []
+    for book in books:
+        response_books.append(
+            LibgenBookSchema(
+                id=book.id,
+                topic_name=book.topic.parent.name,
+                subtopic_name=book.topic.name,
+                authors=book.authors,
+                title=book.title,
+                publisher=book.publisher,
+                year=book.year,
+                pages=book.pages,
+                size=book.size,
+                extension=book.extension,
+                language=book.language,
+                download_link=book.download_link
+            )
+        )
+
+    return LibgenBooksResponse(
+        libgen_books=response_books,
         page=page,
         total_pages=total_pages
     )
