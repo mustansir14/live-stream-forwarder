@@ -31,3 +31,18 @@ services:
     image: "redis:alpine"
     ports:
       - "6378:6379"
+
+  postgres:
+    image: "postgres:alpine"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: live-stream-forwarder
+      POSTGRES_PASSWORD: live-stream-forwarder
+      POSTGRES_DB: live-stream-forwarder
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data:
