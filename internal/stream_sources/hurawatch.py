@@ -25,7 +25,7 @@ class Hurawatch(IStreamSource):
             self.__scrape_movies()
             self.__scrape_tv_shows()
             print_with_hurawatch_prefix(f"Movies and Tv shows synced. Sleeping for 6 hours.")
-            time.sleep(21600)  # Sleep for 6 minutes before checking again
+            time.sleep(21600)  # Sleep for 6 hours before checking again
 
     
     def __scrape_movies(self) -> None:

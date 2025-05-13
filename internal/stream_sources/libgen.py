@@ -76,6 +76,7 @@ class Libgen(IStreamSource):
                                 )
 
                         page += 1
+        time.sleep(86400) # Sleep for 24 hours before the next run
 
                         
                     
