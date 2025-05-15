@@ -8,6 +8,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://live-stream-forwarder:live-stream-forwarder@postgres/live-stream-forwarder
     cap_add:
       - SYS_ADMIN          # Grant additional permissions (for audio/video capture)
     volumes:
@@ -22,6 +23,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://live-stream-forwarder:live-stream-forwarder@postgres/live-stream-forwarder
     cap_add:
       - SYS_ADMIN          # Grant additional permissions (for audio/video capture)
     volumes:
